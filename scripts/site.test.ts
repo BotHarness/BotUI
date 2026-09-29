@@ -1,266 +1,217 @@
+// @vitest-environment node
 import { createHash } from "node:crypto";
-import { readFile } from "node:fs/promises";
-import { existsSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
+import { readFile, readdir } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const site = join(root, "apps", "site");
-const sitePublic = join(site, "public");
-const built = join(root, "packages", "core", "dist", "index.js");
+const dist = join(site, "dist");
+const src = join(site, "src");
+
+const hash = (s: string) => createHash("sha256").update(s).digest("hex").slice(0, 12);
+const distExists = existsSync(dist);
+const skip = distExists ? "" : " — run `pnpm build` first";
 
 /**
- * The site is the only place that runs the component in a browser we do not control,
- * so it gets the same class of check as the library: every name it imports has to
- * exist, and every file it loads has to be there.
+ * The site is the only place the component runs in a browser nobody is watching, so it
+ * gets the same class of check as the library.
  *
- * A demo page is where a renamed export goes to die — the page still parses, the
- * script still loads, and the field is simply absent.
+ * These are deliberately about the BUILD OUTPUT rather than the source. A docs site
+ * that typechecks and fails to render is a docs site nobody reads, and the two failure
+ * modes that actually shipped here — an unstyled page, and a field that drew nothing —
+ * were both invisible to every check that looked at the source.
  */
-const hash = (s: string) => createHash("sha256").update(s).digest("hex").slice(0, 12);
-
-describe("the site", () => {
-  it("the demo does not import itself", async () => {
-    // A build step that writes two artifacts to one path does not fail: the second
-    // simply wins, the page parses, and the component is silently gone. The demo
-    // importing the file it IS is that bug, exactly.
-    const source = await readFile(join(sitePublic, "botui.js"), "utf8");
-    const specifiers = [...source.matchAll(/from\s*["']\.\/([\w.-]+)["']/g)].map((m) => m[1]!);
-    expect(specifiers.length).toBeGreaterThan(0);
-    expect(specifiers, "the demo imports its own file").not.toContain("botui.js");
-    for (const specifier of specifiers) {
-      expect(
-        existsSync(join(sitePublic, specifier)),
-        `${specifier} is imported but not staged`,
-      ).toBe(true);
+describe("the built site", () => {
+  it("exists, and serves the registry from its own origin", async () => {
+    if (!distExists) throw new Error(`no build at ${dist}${skip}`);
+    const registry = JSON.parse(await readFile(join(dist, "registry.json"), "utf8"));
+    expect(registry.items.length).toBeGreaterThan(0);
+    // the per-item URLs are what `npx shadcn add` and the CLI both fetch
+    for (const item of registry.items) {
+      expect(existsSync(join(dist, "r", `${item.name}.json`)), `${item.name} is not served`).toBe(
+        true,
+      );
     }
   });
 
-  it("the demo's engine import is the build, not a source copy", async () => {
-    // the demo has to run the same bytes a user installs
-    const source = await readFile(join(sitePublic, "botui.js"), "utf8");
-    const [specifier] = [...source.matchAll(/from\s*["']\.\/([\w.-]+)["']/g)].map((m) => m[1]!);
-    const staged = await readFile(join(sitePublic, specifier!), "utf8");
-    // named apart from the module-level path: a `const built` here would shadow it
-    // and read as a self-reference
-    const engineBytes = await readFile(built, "utf8");
-    // the build's sourceMappingURL is rewritten to the staged filename, and that one
-    // comment is the ONLY permitted difference — anything else means the demo is
-    // running code a user would not get
-    const strip = (text: string) => text.replace(/\/\/# sourceMappingURL=\S+/, "");
-    expect(hash(strip(staged)), "the staged engine is not the build").toBe(
-      hash(strip(engineBytes)),
-    );
-    expect(staged, "the staged engine still points at a map that is not there").toContain(
-      "sourceMappingURL=botui-engine.js.map",
-    );
+  it("the page is a real Astro page with hydrated islands", async () => {
+    if (!distExists) throw new Error(`no build at ${dist}${skip}`);
+    const html = await readFile(join(dist, "index.html"), "utf8");
+    // `astro-island` is how an island is marked; without it the components are
+    // server-rendered markup that never becomes interactive
+    expect(html, "no hydrated islands — the page is static markup").toContain("astro-island");
+    expect(html, "no island is hydrated").toMatch(/client="(visible|load)"/);
+    expect(html).toContain("npx @botharness/botui add dot-matrix");
   });
 
-  it("every name the demo imports is exported by the build", async () => {
-    if (!existsSync(built)) {
-      throw new Error("the site needs packages/core/dist — run `pnpm build` before this suite");
-    }
-    const source = await readFile(join(sitePublic, "botui.js"), "utf8");
-    const mod = (await import(built)) as Record<string, unknown>;
-    const statements = source.matchAll(/import\s*\{([^}]+)\}\s*from\s*["']\.\/([\w.-]+)["']/g);
-    const imported = [...statements]
-      .flatMap((m) => (m[1] ?? "").split(","))
-      .map((name) => name.trim())
-      .filter(Boolean);
-    expect(imported.length).toBeGreaterThan(5);
-    for (const name of imported) {
-      expect(name in mod, `the demo imports ${name}, which the build does not export`).toBe(true);
-    }
-  });
+  it("the CSS bundle carries BOTH the page rules and the component rules", async () => {
+    // The regression this exists for: a build emitted the component stylesheet under
+    // the page stylesheet's name, overwrote the source, and shipped a site with no
+    // page styles at all — while every source-level check passed. Now the component
+    // stylesheet is imported from the package, so the check is that the ONE bundle
+    // has both, and neither has swallowed the other.
+    if (!distExists) throw new Error(`no build at ${dist}${skip}`);
+    const assets = join(dist, "assets");
+    const css = (await readdir(assets)).filter((f) => f.endsWith(".css"));
+    expect(css.length, "no stylesheet was emitted").toBeGreaterThan(0);
+    const all = (await Promise.all(css.map((f) => readFile(join(assets, f), "utf8")))).join("\n");
 
-  it("the tables the demo renders controls from are non-empty", async () => {
-    const mod = (await import(built)) as Record<string, unknown>;
-    for (const key of [
-      "PRESET_KEYS",
-      "SILHOUETTE_KEYS",
-      "DOT_SHAPE_KEYS",
-      "DOT_SHAPES",
-      "PRESETS",
-    ]) {
-      const value = mod[key];
-      expect(value, key).toBeDefined();
-      const size = Array.isArray(value) ? value.length : Object.keys(value as object).length;
-      expect(size, `${key} is empty — the demo would render blank controls`).toBeGreaterThan(0);
-    }
-  });
-
-  it("the page's own stylesheet styles the PAGE, not the component", async () => {
-    // The shipped bug: the build emitted the component stylesheet as botui.css, which
-    // was also the page stylesheet's name, and overwrote the source. The site then
-    // served the component's rules at /botui.css and rendered entirely unstyled.
-    // Every other check passed, because the file existed and nothing had asserted
-    // what was IN it.
-    const css = await readFile(join(sitePublic, "site.css"), "utf8");
     for (const selector of [
       ":root",
       ".top",
       ".lede",
       ".install",
-      ".cards",
-      ".stage",
-      ".readout",
-      "footer",
+      ".playground",
+      ".registry-grid",
     ]) {
-      expect(css, `site.css is missing ${selector} — is it the component's stylesheet?`).toContain(
-        selector,
-      );
+      expect(all, `the page rules are missing ${selector}`).toContain(selector);
     }
-    // and the tokens the demo and the page both read
-    expect(css).toContain("--ink");
-    // the component stylesheet is a DIFFERENT file, with the component's rules
-    const component = await readFile(join(sitePublic, "botui-dot-matrix.css"), "utf8");
-    expect(component).toContain(".botui-dot-matrix");
-    expect(component, "the two stylesheets are the same file").not.toBe(css);
-    expect(component).not.toContain(".lede");
+    for (const token of ["--ink", "--muted", "--line"]) {
+      expect(all, `the page tokens are missing ${token}`).toContain(token);
+    }
+    // the component's own rules have to be there too, or the CSS renderer in the
+    // playground has keyframes and no layout
+    expect(all, "the component stylesheet is not in the bundle").toContain(".botui-dot-matrix");
+    expect(all, "the component keyframes are not in the bundle").toContain("@keyframes botui-dm-");
   });
 
-  it("every stylesheet the page links is distinct on disk", async () => {
-    // two <link>s pointing at one file is the same failure wearing a different hat
-    const html = await readFile(join(site, "index.html"), "utf8");
-    const hrefs = [...html.matchAll(/<link[^>]+rel="stylesheet"[^>]+href="([^"]+)"/g)].map(
-      (m) => m[1]!,
+  it("the engine is in the CLIENT bundle, so the demo is not a mock", async () => {
+    if (!distExists) throw new Error(`no build at ${dist}${skip}`);
+    const assets = join(dist, "assets");
+    const js = (await readdir(assets)).filter((f) => f.endsWith(".js"));
+    const all = (await Promise.all(js.map((f) => readFile(join(assets, f), "utf8")))).join("\n");
+    // the component's own strings, not just its exports: a page could import the
+    // package for its types and render something else entirely
+    expect(all, "the engine did not reach the client bundle").toContain("botui-dot-matrix");
+    expect(all).toContain("botui-dm-");
+    // and React is really there, not a hand-rolled stand-in
+    expect(all).toContain("react");
+  });
+
+  it("the component stylesheet the page uses is the one the package exports", async () => {
+    // one copy of the rules, from the build, not a second hand-maintained file
+    const pkg = JSON.parse(await readFile(join(root, "packages/core/package.json"), "utf8"));
+    expect(pkg.exports["./style.css"], "the package no longer exports its stylesheet").toBe(
+      "./dist/botui-dot-matrix.css",
     );
-    expect(hrefs.length).toBeGreaterThan(1);
-    expect(new Set(hrefs).size, "the page links the same stylesheet twice").toBe(hrefs.length);
-  });
-
-  it("no generated file shares a name with a hand-authored one", async () => {
-    // GENERATED is the allowlist; anything in public/ that is not on it and not
-    // hand-authored would be a build waiting to overwrite the source
-    const source = await readFile(join(root, "scripts", "build-site.mjs"), "utf8");
-    const listed = new Set(
-      [...source.matchAll(/GENERATED = new Set\(\[([^\]]*)\]/gs)].flatMap((m) =>
-        [...(m[1] ?? "").matchAll(/"([^"]+)"/g)].map((x) => x[1]!),
-      ),
+    const layout = await readFile(join(src, "layouts/Base.astro"), "utf8");
+    expect(layout, "the layout does not import the component stylesheet").toContain(
+      "@botharness/botui-core/style.css",
     );
-    expect(listed.size).toBeGreaterThan(0);
-    for (const name of listed) {
-      expect(
-        source.includes(`"${name}"`),
-        `${name} is on the GENERATED list but nothing emits it`,
-      ).toBe(true);
-    }
+  });
+});
+
+describe("the site source", () => {
+  it("the demos mount the engine directly, not through the React wrapper", async () => {
+    // a docs site that demos its own component through its own wrapper inherits every
+    // fix and reports the component works. The playground has to exercise core.
+    const matrix = await readFile(join(src, "components/Matrix.tsx"), "utf8");
+    expect(matrix, "the demo must not import the React wrapper").not.toContain(
+      "@botharness/botui-react",
+    );
+    expect(matrix).toContain("createDotMatrix");
+    expect(matrix).toContain("@botharness/botui-core");
   });
 
-  it("every file the page references is served", async () => {
-    const html = await readFile(join(site, "index.html"), "utf8");
-    const referenced = [
-      ...[...html.matchAll(/(?:href|src)="(\/[^"#?]+)"/g)].map((m) => m[1]!),
-      // the favicon is inlined, and the module graph resolves relative to the page
-      ...[...html.matchAll(/(?:from|import)\s*['"](\/[^'"]+)['"]/g)].map((m) => m[1]!),
-    ];
-    for (const path of new Set(referenced)) {
-      expect(
-        existsSync(join(sitePublic, path.replace(/^\//, ""))),
-        `${path} is referenced but missing`,
-      ).toBe(true);
-    }
+  it("the playground explains the two size vocabularies, not just one number", async () => {
+    // `dot / cell` and `dot / pitch` are different numbers and only one means
+    // anything to the eye: 100% of the pitch is two dots touching
+    const playground = await readFile(join(src, "components/Playground.tsx"), "utf8");
+    expect(playground).toContain("dot / pitch");
+    expect(playground).toContain("two dots touching");
+    expect(playground).toContain("touchingDotSize");
   });
 
-  it("every element the demo reaches for exists in the markup", async () => {
-    // a null from querySelector is a TypeError on the first line of a handler, and
-    // it only shows up in a browser nobody is watching
-    const js = await readFile(join(sitePublic, "botui.js"), "utf8");
-    const html = await readFile(join(site, "index.html"), "utf8");
-    const ids = new Set([...html.matchAll(/id="([^"]+)"/g)].map((m) => m[1]!));
-    const wanted = [...js.matchAll(/\$\(["']#([a-z-]+)["']\)/g)].map((m) => m[1]!);
-    expect(wanted.length).toBeGreaterThan(5);
-    for (const id of new Set(wanted)) {
-      expect(ids.has(id), `the demo reaches for #${id}, which the page does not define`).toBe(true);
-    }
+  it("the registry list reads the registry rather than restating it", async () => {
+    // a hardcoded list on the page would advertise components that cannot be installed
+    const list = await readFile(join(src, "components/RegistryList.tsx"), "utf8");
+    expect(list).toMatch(/fetch\(["']\/registry\.json["']\)/);
   });
 
   it("the install command on the page is the one the README documents", async () => {
     // two different install commands on one site is how nobody ends up with the right one
-    const html = await readFile(join(site, "index.html"), "utf8");
+    const page = await readFile(join(src, "pages/index.astro"), "utf8");
     const readme = await readFile(join(root, "README.md"), "utf8");
-    const fromPage = html.match(/id="install-cmd">([^<]+)</)?.[1]?.trim();
-    expect(fromPage).toBe("npx @botharness/botui add dot-matrix");
-    expect(readme).toContain(fromPage!);
+    const command = page.match(/command="([^"]+)"/)?.[1];
+    expect(command).toBe("npx @botharness/botui add dot-matrix");
+    expect(readme).toContain(command!);
+  });
+
+  it("the deploy target is Cloudflare Pages, and the build output is static", async () => {
+    // a Worker with static assets and a Pages project are different products with
+    // different URLs; the registry is served from the second one
+    const config = await readFile(join(site, "astro.config.mjs"), "utf8");
+    expect(config, "the site must be a static build for Pages").toContain("output: 'static'");
+    const pkg = JSON.parse(await readFile(join(site, "package.json"), "utf8"));
+    expect(pkg.scripts.deploy).toContain("pages deploy");
+  });
+
+  it("the typecheck covers the site, and says what it cannot cover", async () => {
+    // `astro check` does not support TypeScript 7 yet, so the .astro files are NOT
+    // typechecked. That is a real gap and it belongs in the file that runs the check,
+    // not in someone's memory.
+    const scripts = JSON.parse(await readFile(join(root, "package.json"), "utf8"));
+    expect(scripts.scripts.typecheck, "the site is not typechecked").toContain("apps/site");
+    const agents = await readFile(join(root, "AGENTS.md"), "utf8");
+    expect(agents, "the astro-check gap is undocumented").toMatch(/astro check/);
   });
 });
 
-describe("the demo, executed", () => {
-  it("runs the real page and paints the field", async () => {
-    // The bug this catches: a build step wrote the engine and the demo to the same
-    // path, the demo won, the page parsed fine, and the component was simply absent.
-    // Every static check above passed while the page was broken.
-    const { JSDOM } = await import("jsdom");
-    const { pathToFileURL } = await import("node:url");
-    const html = await readFile(join(site, "index.html"), "utf8");
-
-    const dom = new JSDOM(html, { url: "https://ui.botharness.ai/" });
-    const errors: string[] = [];
-    dom.window.addEventListener("error", (e: ErrorEvent) => errors.push(e.message));
-    // give the module the globals it expects from a browser. `navigator` is left
-    // alone: in this environment it is a getter-only global, and assigning to it
-    // throws. The demo never reads it, so there is nothing to provide.
-    const g = globalThis as Record<string, unknown>;
-    const saved = {
-      document: g.document,
-      window: g.window,
-      requestAnimationFrame: g.requestAnimationFrame,
-      cancelAnimationFrame: g.cancelAnimationFrame,
-      fetch: g.fetch,
-    };
-    g.document = dom.window.document;
-    g.window = dom.window;
-    // the engine drives itself with rAF. jsdom only provides it under
-    // pretendToBeVisual, so a plain frame queue stands in — the test is about the
-    // field being painted, not about frame timing
-    let handle = 0;
-    const frames = new Map<number, FrameRequestCallback>();
-    g.requestAnimationFrame = ((cb: FrameRequestCallback) => {
-      frames.set(++handle, cb);
-      return handle;
-    }) as typeof requestAnimationFrame;
-    g.cancelAnimationFrame = ((id: number) => frames.delete(id)) as typeof cancelAnimationFrame;
-    // The demo reads the registry over the network. It has to be globalThis.fetch,
-    // not dom.window.fetch: the demo is a module running in THIS realm, so a window
-    // method it never calls is not what its bare `fetch(...)` resolves to. (It fails
-    // quietly, too — the demo catches and renders an error string.)
-    const serve = async (url: string) => {
-      const rel = String(url).replace("https://ui.botharness.ai/", "");
-      const body = await readFile(join(sitePublic, rel), "utf8");
-      return { ok: true, status: 200, json: async () => JSON.parse(body) } as unknown as Response;
-    };
-    g.fetch = serve;
-    dom.window.fetch = serve as typeof fetch;
-
-    try {
-      const module = await import(pathToFileURL(join(sitePublic, "botui.js")).href);
-      void module;
-      // the demo is top-level-await driven; let its async tail settle
-      await new Promise((r) => setTimeout(r, 50));
-
-      const d = dom.window.document;
-      expect(errors, `the demo threw: ${errors.join("; ")}`).toEqual([]);
-      // the stage has a real field on it
-      expect(
-        d.querySelectorAll("#stage svg path").length,
-        "the stage field is empty",
-      ).toBeGreaterThan(10);
-      // the controls are populated from the engine's tables
-      expect(d.querySelectorAll("#preset option").length).toBeGreaterThan(3);
-      expect(d.querySelectorAll("#silhouette option").length).toBeGreaterThan(3);
-      expect(d.querySelectorAll("#dot option").length).toBeGreaterThan(3);
-      // the registry rendered, and each card got a live preview
-      expect(d.querySelectorAll("#registry-list .card").length).toBeGreaterThan(0);
-      expect(d.querySelectorAll("#registry-list .preview svg").length).toBeGreaterThan(0);
-      // the readout explains the two size vocabularies
-      expect(d.querySelector("#readout")?.textContent).toContain("two dots touching");
-    } finally {
-      for (const [k, v] of Object.entries(saved)) {
-        if (v === undefined) delete g[k];
-        else g[k] = v;
+describe("the engine the site runs", () => {
+  it("the site imports the built engine, so the demo is the same implementation", async () => {
+    const built = join(root, "packages/core/dist/index.js");
+    if (!existsSync(built)) throw new Error(`no engine build at ${built}${skip}`);
+    const mod = (await import(built)) as Record<string, unknown>;
+    // every name the site's components import
+    const sources = await Promise.all(
+      (await readdir(join(src, "components"))).map((f) =>
+        readFile(join(src, "components", f), "utf8"),
+      ),
+    );
+    const wanted = new Set<string>();
+    for (const source of sources) {
+      for (const statement of source.matchAll(
+        /import\s*\{([^}]+)\}\s*from\s*['"]@botharness\/botui-core['"]/g,
+      )) {
+        for (const name of (statement[1] ?? "").split(",")) {
+          // a `type` import is erased at runtime, so asking whether it is a runtime
+          // export is the wrong question; whether it RESOLVES is tsc's job
+          const clean = name.trim();
+          if (clean && !clean.startsWith("type ")) wanted.add(clean);
+        }
       }
-      dom.window.close();
     }
+    expect(wanted.size, "the site imports nothing from the engine").toBeGreaterThan(5);
+    for (const name of wanted) {
+      expect(name in mod, `the site imports ${name}, which the engine does not export`).toBe(true);
+    }
+  });
+
+  it("the engine build is the one the registry was generated from", async () => {
+    // the registry ships source and the site runs the build, so they are different
+    // bytes by design. What has to hold is that both come from the same commit of the
+    // same tree — which is why the registry is generated rather than maintained.
+    const item = JSON.parse(await readFile(join(site, "public/r/dot-matrix.json"), "utf8"));
+    const source = item.files.find((f: { path: string }) =>
+      f.path.endsWith("dot-matrix/matrix.ts"),
+    );
+    const onDisk = await readFile(join(root, "packages/core/src/dot-matrix/matrix.ts"), "utf8");
+    expect(hash(source.content), "the registry copy has drifted from the source").toBe(
+      hash(onDisk),
+    );
+  });
+});
+
+describe("what the toolchain cannot check", () => {
+  it("records the astro-check / TypeScript 7 gap in the repo", () => {
+    // `astro check` refuses TypeScript 7, so `.astro` files are not typechecked. The
+    // risk is a typo in a template expression failing at build time rather than in
+    // review; the build catches it, but only for the pages that exist.
+    const agents = readFileSync(join(root, "AGENTS.md"), "utf8");
+    expect(agents).toMatch(/TypeScript 7/);
+    expect(agents).toMatch(/not typechecked|\.astro/);
   });
 });

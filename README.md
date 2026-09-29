@@ -74,33 +74,38 @@ The full option list, and the reasoning behind the size algebra, are in [`packag
 
 Using them as npm packages is supported but not the recommended path — the point is that you do not have to.
 
+## The site
+
+`apps/site` is an [Astro](https://astro.build) site with React islands, built by Vite and deployed to **Cloudflare Pages** as `ui.botharness.ai`. It is `output: 'static'`, so the deploy is a file tree.
+
+The demos mount `@botharness/botui-core` **directly**, not through the published `<DotMatrix>` wrapper. A docs site that demos its own component through its own wrapper inherits every fix and reports the component works; here the only React code is a ref and an effect, so what the page shows is the engine doing its own thing.
+
+```bash
+pnpm site:dev       # astro dev
+pnpm site:build
+pnpm site:deploy    # wrangler pages deploy
+```
+
 ## Development
 
 ```bash
 pnpm install
-pnpm build            # packages → CSS → registry → site
-pnpm verify           # format, lint, typecheck, test, registry check
+pnpm build      # packages → CSS → registry → the Astro site, in that order
+pnpm verify     # format, lint, typecheck, test, registry check
 ```
+
+Toolchain: pnpm 12 · Node ≥22 · **TypeScript 7** · **Vite 8** · **React 19.3** · **Astro 7** · oxlint · oxfmt · vitest · tsdown.
 
 `pnpm build` runs four steps in order, and each one is a build artefact rather than a checked-in file:
 
 1. `tsdown` per package
 2. `scripts/emit-css.mjs` — the stylesheet, generated from the same envelope functions the runtime uses
 3. `scripts/build-registry.mjs` — `registry.json` and `r/*.json`, projected from `packages/*`
-4. `scripts/build-site.mjs` — the demo page, running the built engine
+4. `astro build` — the site, which imports the engine as a package and the stylesheet as `@botharness/botui-core/style.css`
 
 The generated registry is never committed. A hand-maintained JSON carrying a copy of the source is a second source of truth that goes stale the first time a line changes upstream; `scripts/check-registry.mjs` exists to keep that from ever being possible, and it fails the build on an undeclared import, an escaping target, a missing dependency or a stale served item.
 
-## Deploying and releasing
-
-The registry is served from a Cloudflare Worker on `ui.botharness.ai`:
-
-```bash
-pnpm build
-pnpm --filter botui-site deploy   # or: wrangler deploy -c apps/site/wrangler.jsonc
-```
-
-Releasing to npm:
+## Releasing
 
 ```bash
 pnpm release            # build + verify, then print what it would publish

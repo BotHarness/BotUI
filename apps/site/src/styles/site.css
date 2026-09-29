@@ -285,3 +285,176 @@ footer {
   color: var(--muted);
   font-size: 13px;
 }
+
+/* ── the Astro site ───────────────────────────────────────────────────────── */
+
+.prose-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 16px;
+  margin-top: 20px;
+}
+
+.prose-grid article {
+  border: 1px solid var(--line);
+  background: var(--card);
+  border-radius: var(--radius);
+  padding: 18px;
+}
+
+.prose-grid h3 {
+  margin: 0 0 6px;
+  font-size: 15px;
+}
+
+.prose-grid p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.registry-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 16px;
+  margin-top: 20px;
+}
+
+.registry-card {
+  border: 1px solid var(--line);
+  background: var(--card);
+  border-radius: var(--radius);
+  padding: 18px;
+}
+
+.registry-card h3 {
+  margin: 0 0 4px;
+  font-size: 15px;
+}
+
+.registry-card p {
+  margin: 10px 0 0;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.registry-preview {
+  height: 110px;
+  display: grid;
+  place-items: center;
+  color: var(--ink);
+  margin-bottom: 12px;
+}
+
+.registry-install {
+  display: block;
+  font-size: 12px;
+  color: var(--muted);
+  overflow-x: auto;
+  white-space: nowrap;
+}
+
+.registry-loading,
+.registry-error {
+  color: var(--muted);
+  font-size: 14px;
+  margin-top: 20px;
+}
+
+.playground {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 280px;
+  gap: 24px;
+  align-items: start;
+  margin-top: 20px;
+}
+
+.playground-stage {
+  display: grid;
+  place-items: center;
+  min-height: 300px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--card);
+  /* the field is sized in px by the component; the pane must not stretch it */
+  overflow: hidden;
+  color: var(--ink);
+}
+
+.playground-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.playground-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12px;
+}
+
+.playground-field > span {
+  display: flex;
+  justify-content: space-between;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-size: 11px;
+}
+
+.playground-field em {
+  font-style: normal;
+  color: var(--ink);
+  font-family: ui-monospace, monospace;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+.playground-field select,
+.playground-field input[type="range"] {
+  width: 100%;
+  font: inherit;
+  font-size: 13px;
+  color: var(--ink);
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 5px 8px;
+}
+
+.playground-check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  margin-top: 4px;
+}
+
+.playground-check span {
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.playground-note {
+  color: var(--muted);
+  font-size: 12px;
+  margin: 0;
+  border-left: 2px solid var(--line);
+  padding-left: 10px;
+}
+
+.playground-readout {
+  grid-column: 1 / -1;
+  margin: 0;
+  font-family: ui-monospace, monospace;
+  font-size: 12px;
+  color: var(--muted);
+  white-space: pre-wrap;
+}
+
+@media (max-width: 860px) {
+  .playground {
+    grid-template-columns: 1fr;
+  }
+}

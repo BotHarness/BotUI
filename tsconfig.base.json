@@ -15,12 +15,15 @@
     "skipLibCheck": true,
     "noEmit": true,
     "types": ["node"],
-    "baseUrl": ".",
+    // TS 7 removed `baseUrl`; `paths` resolve relative to THIS file, which lives at
+    // the repo root — so these are repo-root-relative, not package-relative. That is
+    // also what lets each package typecheck against its siblings' source without a
+    // build first. TS 7 requires the explicit `./` now that baseUrl is gone.
     "paths": {
-      "@botharness/botui-core": ["packages/core/src/index.ts"],
-      "@botharness/botui-core/*": ["packages/core/src/*"],
-      "@botharness/botui-react": ["packages/react/src/index.ts"],
-      "@botharness/botui": ["packages/cli/src/index.ts"]
+      "@botharness/botui-core": ["./packages/core/src/index.ts"],
+      "@botharness/botui-core/*": ["./packages/core/src/*"],
+      "@botharness/botui-react": ["./packages/react/src/index.ts"],
+      "@botharness/botui": ["./packages/cli/src/index.ts"]
     }
   }
 }

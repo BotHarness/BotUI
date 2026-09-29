@@ -5,6 +5,15 @@ BotUI 的所有值得注意的变更都记录在此。格式遵循
 
 ## [Unreleased]
 
+### 变更
+
+- **站点改为 Astro + React islands，部署到 Cloudflare Pages。** `apps/site` 原先是一个手写 HTML + module script，
+  由 Worker 静态资源托管；现在是 `output: 'static'` 的 Astro 7 + React 19.3 islands，由 Vite 构建，部署到
+  `botui-site` Pages 项目。demo 直接挂载 `@botharness/botui-core`，而不是走已发布的 React wrapper —— 否则文档站
+  会继承 wrapper 的每一个修复，并据此宣称组件是好的。
+- 工具链升级到 TypeScript 7、Vite 8、React 19.3、Astro 7。TS 7 移除了 `baseUrl`，因此 `tsconfig.base.json` 里的
+  `paths` 改为显式 `./` 前缀。
+
 ## [0.1.0] — 2026-09-30
 
 ### 新增

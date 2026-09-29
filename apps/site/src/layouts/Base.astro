@@ -1,0 +1,28 @@
+---
+// The page's own styles first, then the component's — a generated stylesheet that the
+// package exports, so the CSS renderer in the playground has the layout rules it needs
+// and there is exactly one copy of them.
+import '@botharness/botui-core/style.css';
+import '../styles/site.css';
+
+interface Props {
+  title: string;
+  description: string;
+}
+
+const { title, description } = Astro.props;
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{title}</title>
+    <meta name="description" content={description} />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+  </head>
+  <body>
+    <slot />
+  </body>
+</html>

@@ -1,0 +1,9 @@
+# Cloudflare PAGES — not a Worker.
+#
+# The site is `output: 'static'`, so the deploy is a file tree and Pages serves it as
+# one. The registry JSON has to be reachable at /registry.json and /r/*.json because
+# that is what `npx @botharness/botui` and `npx shadcn add` fetch, and a stale copy
+# there is an install that silently does nothing.
+name = "botui-site"
+compatibility_date = "2026-09-30"
+pages_build_output_dir = "dist"

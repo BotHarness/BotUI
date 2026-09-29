@@ -5,6 +5,16 @@ All notable changes to BotUI are recorded here. The format follows
 
 ## [Unreleased]
 
+### Changed
+
+- **The site is now Astro + React islands on Cloudflare Pages.** `apps/site` was a hand-written HTML page with a
+  module script, served from a Worker with static assets; it is now `output: 'static'` Astro 7 with React 19.3
+  islands built by Vite, deployed to the `botui-site` Pages project. The demos mount
+  `@botharness/botui-core` directly rather than through the published React wrapper, so the site cannot inherit a
+  fix and report the component works.
+- Toolchain moved to TypeScript 7, Vite 8, React 19.3 and Astro 7. TS 7 removed `baseUrl`, so `paths` in
+  `tsconfig.base.json` are now explicitly `./`-prefixed.
+
 ## [0.1.0] — 2026-09-30
 
 ### Added

@@ -15,13 +15,25 @@ drives most of what follows.
 
 ```bash
 pnpm install
-pnpm build      # packages → CSS → registry → site, in that order
-pnpm verify     # format:check, lint, typecheck, test, registry:check
+pnpm build        # packages → CSS → registry → the Astro site, in that order
+pnpm verify       # format:check, lint, typecheck, test, registry:check
+pnpm site:dev     # astro dev
+pnpm site:deploy  # wrangler pages deploy — Cloudflare Pages, project botui-site
 ```
 
-Toolchain: pnpm 12.4.2 · Node ≥22 (`.node-version` = v24.21.0) · TypeScript 5.9 · oxlint · oxfmt · vitest · tsdown.
-Deploy the site with `wrangler deploy -c apps/site/wrangler.jsonc` (Worker `botui-site`, custom domain
-`ui.botharness.ai`).
+Toolchain: pnpm 12.4.2 · Node ≥22 (`.node-version` = v24.21.0) · **TypeScript 7** · **Vite 8** ·
+**React 19.3** · **Astro 7** · oxlint · oxfmt · vitest · tsdown · wrangler 4.
+
+`ui.botharness.ai` is a **Cloudflare Pages** project (`botui-site`), serving the static Astro build plus the
+generated registry. It is not a Worker: the site is `output: 'static'`, so the deploy is a file tree.
+
+### What the typecheck does NOT cover
+
+`astro check` does not support TypeScript 7 yet — it refuses, and asks for TypeScript 6. So **`.astro` files are
+not typechecked**: a typo in a template expression is caught by `astro build` (which renders every page) or not
+at all. `.tsx` and `.ts` under `apps/site/src` are covered by `tsc --noEmit -p apps/site`.
+
+If Astro ships TS 7 support, wire `astro check` back in rather than leaving this note to drift.
 
 ## The rules that matter here
 
@@ -29,6 +41,11 @@ Deploy the site with `wrangler deploy -c apps/site/wrangler.jsonc` (Worker `botu
   `apps/site/dist/` and `packages/core/dist/botui-dot-matrix.css` are build artefacts and are not committed. The
   stylesheet in particular is generated from the same envelope functions the runtime uses, so a checked-in copy
   would be a second source of truth for the motion tables.
+- **The site's stylesheets are one file each, and the component's comes from the package.** The layout imports
+  `@botharness/botui-core/style.css`; there is no second copy in `apps/site`. An earlier hand-written build emitted
+  the component stylesheet under the page stylesheet's name and overwrote the source, shipping a completely
+  unstyled site with every check green — so a test now reads the built CSS bundle and fails if either set of rules
+  has swallowed the other.
 - **The registry is a projection of `packages/*`, not a manifest.** Add a component by adding a package and a
   table entry in `scripts/build-registry.mjs`. If a file has to be listed twice, the build is wrong.
 - **Ship the source structure intact.** The modules import each other relatively, so the registry preserves the
