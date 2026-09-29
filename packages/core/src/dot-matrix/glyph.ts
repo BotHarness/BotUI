@@ -31,6 +31,12 @@ export type Point = readonly [x: number, y: number];
 /**
  * Vertices of an n-gon on the unit circle, optionally with a star's ratio between
  * the points and the notches (star: 0 = plain n-gon, ~0.45 = a classic 5-point star).
+ *
+ * The two cases are separate loops on purpose. A star is 2n vertices — n points AND
+ * n notches — and a single loop that alternates a "point" and a "notch" radius gets
+ * both halves wrong when star is 0: every other vertex lands at the origin, so a 4-gon
+ * degenerates into a zero-area bowtie and renders as nothing at all. That is not
+ * hypothetical; it is what this function did, and the default dot is a square.
  */
 export function vertices(g: Partial<DotGlyphSpec>): Point[] {
   const n = Math.max(3, Math.round(g.sides ?? GLYPH_DEFAULTS.sides));
@@ -40,16 +46,25 @@ export function vertices(g: Partial<DotGlyphSpec>): Point[] {
   // an EVEN count is offset by half a step so the vertices land on the axes and
   // `sides: 4` is an axis-aligned square rather than a diamond
   const base = spin - Math.PI / 2 + (n % 2 === 0 ? Math.PI / n : 0);
-  const pts: Point[] = [];
-  // 2n vertices when starred: the points, then the notches between them
-  const count = star > 0 ? n * 2 : n;
-  for (let i = 0; i < count; i++) {
-    const a = base + (i / count) * TAU;
-    const point = i % 2 === 0;
-    const r = point ? 1 : star;
-    pts.push([Math.cos(a) * r * aspect, Math.sin(a) * r]);
+  const out: Point[] = [];
+  if (star > 0) {
+    // n points AND n notches, not n alternating radii. With one vertex per arm the
+    // notches do not exist, so they cannot be reflex, so innerRadius has nothing to
+    // round. The notch sits at (1 - star) of the arm, so `star` reads as "how much
+    // deeper than the points" and 0.45 gives the classic waist.
+    for (let i = 0; i < n; i++) {
+      const a = base + (i / n) * TAU;
+      const b = a + TAU / (n * 2);
+      out.push([Math.cos(a) * aspect, Math.sin(a)]);
+      out.push([Math.cos(b) * (1 - star) * aspect, Math.sin(b) * (1 - star)]);
+    }
+  } else {
+    for (let i = 0; i < n; i++) {
+      const a = base + (i / n) * TAU;
+      out.push([Math.cos(a) * aspect, Math.sin(a)]);
+    }
   }
-  return pts;
+  return out;
 }
 
 /**
@@ -180,9 +195,24 @@ export const DOT_SHAPES: Record<
   { label: string; spec: Partial<DotGlyphSpec> }
 > = {
   square: { label: "Square", spec: { sides: 4, radius: 0, aspect: 1 } },
-  rounded: { label: "Rounded", spec: { sides: 4, radius: 0.3, aspect: 1 } },
-  circle: { label: "Circle", spec: { sides: 4, radius: 0.5, aspect: 1 } },
-  ellipse: { label: "Ellipse", spec: { sides: 4, radius: 0.5, aspect: 0.55 } },
+  rounded: { label: "Rounded square", spec: { sides: 4, radius: 0.3, aspect: 1 } },
+  // "circle" is a 32-gon whose corners are filleted to its inradius, not a
+  // filleted square, and the reason is geometric rather than fussy:
+  //
+  //   · a polygon on the UNIT circle has an inradius of cos(π/n) — 0.707 for a
+  //     square, NOT 0.5. So the old `radius: 0.5` under-rounded, and the shape
+  //     called "circle" was a rounded square.
+  //   · rounding is done with QUADRATIC curves, and a quadratic through a 90° arc
+  //     bulges OUTSIDE the circle: its midpoint sits at 0.749 of the radius where
+  //     the true arc is at 0.707. So even at the inradius a filleted square has
+  //     ~6% more area than the circle it is named after.
+  //
+  // Thirty-two sides makes both errors invisible: the polygon is 0.6% under the
+  // circle, the per-arc bulge a fraction of a percent, and a dot is 8–200px.
+  // A cubic would trace a true arc, at the cost of a control point the CSS mask
+  // path would have to carry as well.
+  circle: { label: "Circle", spec: { sides: 32, radius: Math.cos(Math.PI / 32), aspect: 1 } },
+  ellipse: { label: "Ellipse", spec: { sides: 32, radius: Math.cos(Math.PI / 32), aspect: 0.55 } },
   triangle: { label: "Triangle", spec: { sides: 3, radius: 0, aspect: 1 } },
   diamond: { label: "Diamond", spec: { sides: 4, radius: 0, spin: Math.PI / 4, aspect: 1 } },
   pentagon: { label: "Pentagon", spec: { sides: 5, radius: 0, aspect: 1 } },
@@ -192,6 +222,7 @@ export const DOT_SHAPES: Record<
   star6: { label: "6-point star", spec: { sides: 6, star: 0.4, innerRadius: 0, aspect: 1 } },
   burst: { label: "Soft star", spec: { sides: 5, star: 0.44, innerRadius: 0.16, aspect: 1 } },
   drop: { label: "Teardrop", spec: { sides: 5, star: 0.44, innerRadius: 0.5, aspect: 1 } },
+  // a bar's inradius at this aspect is 0.212, so 0.3 over-rounds and clamps: a stadium
   bar: { label: "Bar", spec: { sides: 4, radius: 0.3, aspect: 0.3 } },
 };
 

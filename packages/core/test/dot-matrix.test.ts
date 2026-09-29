@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
   DEFAULTS,
+  DOT_SHAPES,
+  type DotShape,
   ENVELOPES,
   ORDERS,
   PRESETS,
@@ -9,6 +11,9 @@ import {
   STATE_PRESETS,
   cellsFor,
   dotShareOfPitch,
+  glyphPath,
+  specFor,
+  vertices,
   layout,
   softLevel,
   stretched,
@@ -346,3 +351,202 @@ describe("presets", () => {
 function round6(v: number): number {
   return Math.round(v * 1e6) / 1e6;
 }
+
+describe("a glyph has to be a shape, not a path", () => {
+  /**
+   * The signed area of a polygon. A glyph with zero area renders as NOTHING, and
+   * nothing in a DOM dump, a record count, or a mask string reveals that — every
+   * existing check passed while the default dot was invisible.
+   */
+  const area = (pts: readonly (readonly [number, number])[]) => {
+    let a = 0;
+    for (let i = 0; i < pts.length; i++) {
+      const p = pts[i]!;
+      const q = pts[(i + 1) % pts.length]!;
+      a += p[0] * q[1] - q[0] * p[1];
+    }
+    return Math.abs(a) / 2;
+  };
+
+  it("every named shape encloses area", () => {
+    // Regression: `vertices` alternated a point radius of 1 with a notch radius of
+    // `star` even when star was 0, so every second vertex landed on the origin. A
+    // 4-gon became a zero-area bowtie — and the default dot is a 4-gon, so the
+    // whole component rendered blank while every other test passed.
+    for (const name of Object.keys(DOT_SHAPES)) {
+      const spec = specFor(name as DotShape);
+      const g = glyphPath(spec);
+      expect(area(g.pts), `${name} encloses no area — it renders as nothing`).toBeGreaterThan(0.1);
+      expect(g.d, `${name} has no path`).toMatch(/^M/);
+      expect(g.d, `${name} path is not closed`).toMatch(/Z$/);
+    }
+  });
+
+  it("every vertex is a real vertex — none collapsed onto the origin", () => {
+    // the specific failure: a notch at radius 0 is the origin, and a polygon through
+    // the origin has no area
+    for (const name of Object.keys(DOT_SHAPES)) {
+      const g = glyphPath(specFor(name as DotShape));
+      for (const [x, y] of g.pts) {
+        expect(Math.hypot(x, y), `${name} has a vertex at the origin`).toBeGreaterThan(0.01);
+      }
+    }
+  });
+
+  it("a plain n-gon has exactly n vertices, and a star has 2n", () => {
+    // one vertex per arm means the notches do not exist, so they cannot be reflex,
+    // so innerRadius has nothing to round
+    expect(vertices({ sides: 4 })).toHaveLength(4);
+    expect(vertices({ sides: 5 })).toHaveLength(5);
+    expect(vertices({ sides: 5, star: 0.44 })).toHaveLength(10);
+    expect(vertices({ sides: 6, star: 0.4 })).toHaveLength(12);
+    // and never fewer than a triangle
+    expect(vertices({ sides: 1 })).toHaveLength(3);
+  });
+
+  it("a star sits at (1 - star) of its arm, so `star` reads as the waist", () => {
+    const g = glyphPath({ sides: 5, star: 0.44 });
+    const radii = g.pts.map(([x, y]) => Math.hypot(x, y));
+    // the points are the long radius, the notches the short one
+    expect(Math.max(...radii)).toBeCloseTo(1, 6);
+    expect(Math.min(...radii)).toBeCloseTo(0.56, 6);
+  });
+
+  it("sides: 4 is an axis-aligned square, and radius at the inradius is a circle", () => {
+    const square = glyphPath({ sides: 4, radius: 0 });
+    // the even-count half-step offset is what puts the corners on the diagonals and
+    // the edges on the axes; without it `sides: 4` is a diamond
+    for (const [x, y] of square.pts) {
+      expect(Math.abs(x), "an axis-aligned square has corners on the diagonals").toBeCloseTo(
+        Math.abs(y),
+        6,
+      );
+    }
+    // the inradius of a polygon on the unit circle is cos(π/n) — 0.707 for a square,
+    // not 0.5, which is why the old "circle" entry was a rounded square
+    expect(square.inradius).toBeCloseTo(Math.SQRT1_2, 6);
+  });
+
+  it("the inradius is cos(π/n) for every side count", () => {
+    // derived, not tabulated, so `sides: 7` behaves like the rest
+    for (const n of [3, 4, 5, 6, 8]) {
+      expect(glyphPath({ sides: n }).inradius, `sides ${n}`).toBeCloseTo(Math.cos(Math.PI / n), 6);
+    }
+  });
+
+  it("every shape fits the same bounding box, so dotSize means the same thing", () => {
+    // this is the whole reason the dot is sized by bbox and not by the inradius: a
+    // star whose inradius is ~0.1 would be inflated tenfold
+    for (const name of Object.keys(DOT_SHAPES) as DotShape[]) {
+      const g = glyphPath(specFor(name));
+      expect(g.box, `${name} does not fill its box`).toBeGreaterThan(0.5);
+      expect(g.box, `${name} does not fill its box`).toBeLessThan(2.5);
+    }
+  });
+});
+
+describe("the named shapes are what they say they are", () => {
+  /**
+   * The area of the FILLED path, integrating the quadratic fillets.
+   *
+   * Measuring the vertex list instead would be measuring the polygon the fillet cuts
+   * corners off — which is why a test that claimed "a circle is not smaller than a
+   * square" passed at exactly 1.0 for a shape that is not a circle.
+   */
+  const pathArea = (d: string, steps = 24): number => {
+    // tokenise letters and numbers SEPARATELY. Walking one index into both the path
+    // string and a flat number list — which is what this did first — reads the digit
+    // of "0.7071" as the next command, and throws on a path the module just produced.
+    const tokens = [...d.matchAll(/([MLQZ])|(-?\d*\.?\d+)/g)].map((m) =>
+      m[1] ? m[1] : Number(m[2]),
+    );
+    const pts: [number, number][] = [];
+    let i = 0;
+    const quad = (cx: number, cy: number, x: number, y: number) => {
+      const [x0, y0] = pts[pts.length - 1]!;
+      for (let s = 1; s <= steps; s++) {
+        const u = s / steps;
+        const m = 1 - u;
+        pts.push([
+          m * m * x0 + 2 * m * u * cx + u * u * x,
+          m * m * y0 + 2 * m * u * cy + u * u * y,
+        ]);
+      }
+    };
+    while (i < tokens.length) {
+      const op = tokens[i];
+      if (op === "M" || op === "L") {
+        pts.push([tokens[i + 1] as number, tokens[i + 2] as number]);
+        i += 3;
+      } else if (op === "Q") {
+        quad(
+          tokens[i + 1] as number,
+          tokens[i + 2] as number,
+          tokens[i + 3] as number,
+          tokens[i + 4] as number,
+        );
+        i += 5;
+      } else if (op === "Z") {
+        i += 1;
+      } else {
+        // a parser that quietly skipped an unknown command would make every area
+        // assertion below meaningless, so it has to be loud
+        throw new Error(
+          `unexpected path command ${JSON.stringify(op)} — the sampler only knows this module's own output`,
+        );
+      }
+    }
+    let a = 0;
+    for (let k = 0; k < pts.length; k++) {
+      const p = pts[k]!;
+      const q = pts[(k + 1) % pts.length]!;
+      a += p[0] * q[1] - q[0] * p[1];
+    }
+    return Math.abs(a) / 2;
+  };
+
+  it("the shape called circle has the area of a circle", () => {
+    // Two real reasons the old entry was not a circle, and both are asserted here so
+    // neither can come back: a square's inradius is cos(π/4) = 0.707 and not 0.5, and
+    // a QUADRATIC fillet bulges outside a true 90° arc by ~6%. So the table uses a
+    // 32-gon rounded to its own inradius, and the area lands within a fraction of a
+    // percent of a real circle.
+    const g = glyphPath(specFor("circle"));
+    expect(g.d, "a fully rounded polygon must actually contain curves").toContain("Q");
+    const r = Math.cos(Math.PI / 32);
+    const expected = Math.PI * r * r;
+    const actual = pathArea(g.d);
+    expect(Math.abs(actual - expected) / expected, "the circle is not round").toBeLessThan(0.015);
+  });
+
+  it("a filleted square is measurably NOT a circle, which is why the table is not one", () => {
+    // the geometric fact behind the entry above, pinned so the choice stays justified
+    const filletedSquare = pathArea(glyphPath({ sides: 4, radius: Math.SQRT1_2 }).d);
+    const circleAtSameInradius = Math.PI * 0.5;
+    expect(
+      filletedSquare / circleAtSameInradius - 1,
+      "quadratic fillets bulge outside the arc",
+    ).toBeGreaterThan(0.03);
+  });
+
+  it("the shape called square has the area of a square", () => {
+    const g = glyphPath(specFor("square"));
+    // vertices on the unit circle: side √2, so area 2. The path rounds coordinates
+    // to 4 decimals, so the tolerance is the rounding, not the geometry.
+    expect(pathArea(g.d)).toBeCloseTo(2, 3);
+  });
+
+  it("filleting removes area — the corners are what get cut", () => {
+    const square = pathArea(glyphPath(specFor("square")).d);
+    const rounded = pathArea(glyphPath(specFor("rounded")).d);
+    expect(rounded).toBeLessThan(square);
+    // a quarter of the corners go, and nothing else
+    expect(rounded / square).toBeGreaterThan(0.9);
+  });
+
+  it("the path sampler only accepts what this module emits", () => {
+    // a parser that silently mis-reads an unexpected command would make every
+    // assertion above meaningless
+    expect(() => pathArea("M0 0A1 1 0 0 1 1 1Z")).toThrow(/unexpected path command/);
+  });
+});
