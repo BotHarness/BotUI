@@ -1,0 +1,30 @@
+{
+  "name": "@botharness/botui-core",
+  "version": "0.1.0",
+  "description": "The framework-agnostic engine behind BotUI components",
+  "license": "MIT",
+  "files": [
+    "dist"
+  ],
+  "type": "module",
+  "sideEffects": false,
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./style.css": "./dist/botui-dot-matrix.css",
+    "./package.json": "./package.json"
+  },
+  "scripts": {
+    "build": "tsdown",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "tsdown": "^0.20.0",
+    "typescript": "^5.9.3"
+  }
+}

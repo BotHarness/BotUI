@@ -1,0 +1,18 @@
+node_modules/
+dist/
+*.tsbuildinfo
+.DS_Store
+.env
+.env.*
+!.env.example
+# the registry is BUILT from packages/*, never hand-edited; the published copy
+# is committed so the site and the CLI have a stable URL to serve
+
+# the registry and the site bundle are BUILD OUTPUT of packages/* — committing a
+# generated copy of the source is the one thing this repo is designed to prevent
+apps/site/public/registry.json
+apps/site/public/r/
+apps/site/dist/
+apps/site/public/botui-engine.js
+apps/site/public/botui-engine.js.map
+apps/site/public/botui.css

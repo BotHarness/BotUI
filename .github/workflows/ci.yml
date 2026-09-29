@@ -1,0 +1,48 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 12.4.2
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      # The tests read packages/core/dist (the site suite imports the build to prove
+      # the demo only uses exports that exist), so the build comes before the tests
+      # rather than after them.
+      - run: pnpm build
+      - run: pnpm verify
+
+      # the registry is the artefact other people install: prove it is what the
+      # committed source says it is, and that nothing in it was hand-edited
+      - name: the registry matches the source
+        run: |
+          node scripts/build-registry.mjs
+          if ! git diff --quiet -- apps/site/public; then
+            echo "::error::the committed registry is stale — run pnpm build and commit the result"
+            git diff --stat -- apps/site/public
+            exit 1
+          fi
+          node scripts/check-registry.mjs --strict
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: registry
+          path: apps/site/public

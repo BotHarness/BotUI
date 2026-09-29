@@ -1,0 +1,35 @@
+{
+  "name": "botui",
+  "version": "0.0.0",
+  "private": true,
+  "description": "BotUI — open-source, copy-and-own UI components for agent products",
+  "type": "module",
+  "scripts": {
+    "build": "pnpm -r --filter \"./packages/*\" build && node scripts/emit-css.mjs && node scripts/build-registry.mjs && node scripts/build-site.mjs",
+    "typecheck": "tsc --noEmit -p packages/core && tsc --noEmit -p packages/react && tsc --noEmit -p packages/cli",
+    "lint": "oxlint && node scripts/check-registry.mjs --strict",
+    "lint:fix": "oxlint --fix",
+    "format": "oxfmt --write .",
+    "format:check": "oxfmt --check .",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "registry:build": "node scripts/build-registry.mjs",
+    "registry:check": "node scripts/check-registry.mjs --strict",
+    "verify": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm test && pnpm registry:check",
+    "site:build": "node scripts/build-site.mjs"
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.2",
+    "jsdom": "^28.0.1",
+    "oxfmt": "^0.68.0",
+    "oxlint": "^1.50.0",
+    "tsdown": "^0.20.0",
+    "typescript": "^5.9.3",
+    "vitest": "^4.0.18",
+    "wrangler": "4.132.0"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "packageManager": "pnpm@12.4.2"
+}
