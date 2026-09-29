@@ -6,7 +6,7 @@
   "type": "module",
   "scripts": {
     "build": "pnpm -r --filter \"./packages/*\" build && node scripts/emit-css.mjs && node scripts/build-registry.mjs && pnpm --filter botui-site build",
-    "typecheck": "tsc --noEmit -p packages/core && tsc --noEmit -p packages/react && tsc --noEmit -p packages/cli && tsc --noEmit -p apps/site",
+    "typecheck": "pnpm --filter botui-site i18n:compile && tsc --noEmit -p packages/core && tsc --noEmit -p packages/react && tsc --noEmit -p packages/cli && tsc --noEmit -p apps/site",
     "lint": "oxlint && node scripts/check-registry.mjs --strict",
     "lint:fix": "oxlint --fix",
     "format": "oxfmt --write .",
@@ -19,7 +19,8 @@
     "site:build": "pnpm --filter botui-site build",
     "site:deploy": "pnpm --filter botui-site deploy",
     "release": "node scripts/release.mjs",
-    "verify": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm test && pnpm registry:check"
+    "verify": "pnpm i18n && pnpm format:check && pnpm lint && pnpm typecheck && pnpm test && pnpm registry:check",
+    "i18n": "pnpm --filter botui-site i18n:compile"
   },
   "devDependencies": {
     "@types/node": "^22.20.2",

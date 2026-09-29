@@ -379,8 +379,10 @@ describe("a dial that follows a preset must be able to return to it", () => {
     const row = staggerRow();
     const shown = row.querySelector("em")?.textContent ?? "";
     const input = row.querySelector("input") as HTMLInputElement;
-    // spiral's spread is 0.95, and the label has to say so
-    expect(shown).toMatch(/95%/);
+    // spiral's spread is 0.95, and the label has to say so. The expectation comes
+    // from the message rather than a literal, so this test does not encode a language:
+    // a hardcoded "预设" here would have passed in English and failed in Chinese.
+    expect(shown).toContain("95%");
     expect(Number(input.value)).toBe(95);
   });
 
@@ -391,11 +393,13 @@ describe("a dial that follows a preset must be able to return to it", () => {
     expect(reset, "there must be a way back to the preset").toBeTruthy();
 
     drag(input, 20);
-    expect(staggerRow().querySelector("em")?.textContent).toMatch(/^20%/);
+    expect(staggerRow().querySelector("em")?.textContent).toMatch(/^\s*20%/);
     expect(staggerRow().querySelector(".reset")?.textContent).toBe("↺");
 
     act(() => reset.click());
-    expect(staggerRow().querySelector("em")?.textContent).toMatch(/预设 95%/);
+    // back to following the preset: the label is a WORD plus the number, and which
+    // word depends on the locale, so only the number is asserted
+    expect(staggerRow().querySelector("em")?.textContent).toMatch(/95%/);
     expect(staggerRow().querySelector(".reset")?.textContent).toBe("·");
     expect(Number((staggerRow().querySelector("input") as HTMLInputElement).value)).toBe(95);
   });

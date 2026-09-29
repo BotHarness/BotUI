@@ -1,0 +1,28 @@
+---
+/**
+ * The language switcher.
+ *
+ * A plain `<a>` to the sibling locale's page, not a button that calls setLocale().
+ * Both locales are real files in the output, so the link works with JavaScript
+ * disabled and is crawlable — and a client-side toggle would swap the text without
+ * moving the URL, which is worse for sharing a page and impossible to bookmark.
+ */
+import { localizeHref, locales } from '../paraglide/runtime.js';
+
+interface Props {
+  current: string;
+  path: string;
+}
+
+const { current, path } = Astro.props;
+const others = locales.filter((l) => l !== current);
+const LABELS: Record<string, string> = { en: 'EN', zh: '中文' };
+---
+
+{
+  others.map((l) => (
+    <a class="locale-switch" href={localizeHref(path, { locale: l })} hreflang={l} lang={l}>
+      {LABELS[l] ?? l}
+    </a>
+  ))
+}

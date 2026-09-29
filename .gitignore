@@ -14,3 +14,4 @@ apps/site/public/registry.json
 apps/site/public/r/
 apps/site/dist/
 apps/site/.astro/
+apps/site/src/paraglide/

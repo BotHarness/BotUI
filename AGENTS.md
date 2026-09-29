@@ -16,7 +16,8 @@ drives most of what follows.
 ```bash
 pnpm install
 pnpm build        # packages → CSS → registry → the Astro site, in that order
-pnpm verify       # format:check, lint, typecheck, test, registry:check
+pnpm verify       # i18n, format:check, lint, typecheck, test, registry:check
+pnpm i18n          # paraglide compile — the site's generated, gitignored message code
 pnpm site:dev     # astro dev
 pnpm site:deploy  # wrangler pages deploy — Cloudflare Pages, project botui-site
 ```

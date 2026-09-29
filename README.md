@@ -76,7 +76,7 @@ Using them as npm packages is supported but not the recommended path — the poi
 
 ## The site
 
-`apps/site` is an [Astro](https://astro.build) site with React islands, built by Vite and deployed to **Cloudflare Pages** as `ui.botharness.ai`. It is `output: 'static'`, so the deploy is a file tree.
+`apps/site` is an [Astro](https://astro.build) site with React islands, built by Vite and deployed to **Cloudflare Pages** as `ui.botharness.ai`. It is `output: 'static'`, so the deploy is a file tree. The site is bilingual — English at `/`, Chinese at `/zh/` — from Paraglide catalogs in `apps/site/messages/`, one document per locale because a static build has no request to vary on. The language switch is a link to the other locale's file, not a client-side toggle.
 
 The demos mount `@botharness/botui-core` **directly**, not through the published `<DotMatrix>` wrapper. A docs site that demos its own component through its own wrapper inherits every fix and reports the component works; here the only React code is a ref and an effect, so what the page shows is the engine doing its own thing.
 
@@ -91,7 +91,8 @@ pnpm site:deploy    # wrangler pages deploy
 ```bash
 pnpm install
 pnpm build      # packages → CSS → registry → the Astro site, in that order
-pnpm verify     # format, lint, typecheck, test, registry check
+pnpm verify     # i18n, format, lint, typecheck, test, registry check
+pnpm i18n        # compile the message catalogs (generated, gitignored)
 ```
 
 Toolchain: pnpm 12 · Node ≥22 · **TypeScript 7** · **Vite 8** · **React 19.3** · **Astro 7** · oxlint · oxfmt · vitest · tsdown.

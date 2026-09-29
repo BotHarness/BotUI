@@ -132,12 +132,37 @@ describe("the site source", () => {
   });
 
   it("the install command on the page is the one the README documents", async () => {
-    // two different install commands on one site is how nobody ends up with the right one
-    const page = await readFile(join(src, "pages/index.astro"), "utf8");
+    // two different install commands on one site is how nobody ends up with the right
+    // one. The command is a MESSAGE now, so the check reads the catalogue and the
+    // rendered page rather than hunting for a literal in a template.
+    const home = await readFile(join(site, "src/components/Home.astro"), "utf8");
     const readme = await readFile(join(root, "README.md"), "utf8");
-    const command = page.match(/command="([^"]+)"/)?.[1];
-    expect(command).toBe("npx @botharness/botui add dot-matrix");
-    expect(readme).toContain(command!);
+    const catalogue = JSON.parse(await readFile(join(site, "messages/en.json"), "utf8")) as Record<
+      string,
+      string
+    >;
+    const command = catalogue.install_command;
+    expect(command, "the catalogue no longer carries the install command").toBeTruthy();
+    expect(home, "the page must render the command from the catalogue").toContain(
+      "m.install_command()",
+    );
+    expect(readme, "the README must document the same command the page shows").toContain(command!);
+  });
+
+  it("the site renders both locales from one page body", async () => {
+    // two copies of a page is two things that can drift; the locale has to be a
+    // parameter, not a fork
+    const pages = (await readdir(join(src, "pages"), { recursive: true }))
+      .filter((f) => f.endsWith(".astro"))
+      .map(String);
+    expect(pages.sort()).toEqual(["[locale]/index.astro", "index.astro"]);
+    const root = await readFile(join(src, "pages/index.astro"), "utf8");
+    const prefixed = await readFile(join(src, "pages/[locale]/index.astro"), "utf8");
+    // both delegate to the same component
+    expect(root).toContain("<Home />");
+    expect(prefixed).toContain("<Home />");
+    const home = await readFile(join(site, "src/components/Home.astro"), "utf8");
+    expect(home, "Home must not branch on the locale itself").not.toMatch(/if\s*\(\s*locale/);
   });
 
   it("the deploy target is Cloudflare Pages, and the build output is static", async () => {

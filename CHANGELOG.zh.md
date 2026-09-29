@@ -30,6 +30,13 @@ BotUI 的所有值得注意的变更都记录在此。格式遵循
 - `apps/site/test/playground.test.tsx` 驱动真实控件：10 个测试派发 input 事件并断言场确实变了。
   一个渲染出来但不干活的滑杆，在截图和 DOM dump 里和一个正常工作的滑杆无法区分。
 
+- **站点现在支持双语。** 英文在 `/`，中文在 `/zh/`，文案来自 `apps/site/messages/` 下的 Paraglide
+  消息目录；两个语言之间是真实链接，页面带各自的 `hreflang`，`<html lang>` 与文案一致。切换器
+  指向另一个语言的**文件**，而不是客户端 toggle —— 这样关掉 JavaScript 也能到达 `/zh/`，搜索引擎
+  也能抓到。
+- `pnpm i18n` 编译消息目录。`apps/site/src/paraglide` 是生成产物且被 gitignore，因此 `typecheck`
+  和 `verify` 现在会先跑这一步：全新 clone 时它们原本会因为引用尚不存在的文件而失败。
+
 ### 修复
 
 - **三个 playground 滑杆以同一种方式坏掉，而当时的测试全都看不出来。** `radius`、`aspect`、
