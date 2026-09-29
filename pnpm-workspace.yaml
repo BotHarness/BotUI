@@ -5,8 +5,13 @@ packages:
 # pnpm-only setting, kept here rather than in .npmrc: npm warns about unknown project
 # config keys, and anyone who runs npm in this repo should not see a warning from a
 # setting that has nothing to do with them
+# Both ship a platform binary through a postinstall script: esbuild links its own,
+# workerd is wrangler's runtime. pnpm 12 refuses to run a dependency's install
+# script unless it is allowed here, and that refusal is an ERROR, not a warning —
+# which is why every run on main, including the previous commits, died at
+# `pnpm install --frozen-lockfile` before a single test ran.
 allowBuilds:
-  esbuild: set this to true or false
-  workerd: set this to true or false
+  esbuild: true
+  workerd: true
 
 linkWorkspacePackages: true
