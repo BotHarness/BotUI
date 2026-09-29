@@ -62,6 +62,22 @@ or a disconnected mock is preparatory work, not a finished component.
 ## Release
 
 `CHANGELOG.md` and `CHANGELOG.zh.md` are the bilingual ledger, kept structurally aligned. A user-visible change, a
-new component, or a release PR updates both. The registry is versioned with the packages, and a release publishes
-the rebuilt registry before the npm packages, so an `npx` install never resolves to a version that does not exist
-yet.
+new component, or a release PR updates both.
+
+```bash
+pnpm release            # build + verify, then print what it would publish
+pnpm release -- --yes   # publish core → react → cli, then deploy the registry
+```
+
+Three things about that order are load-bearing:
+
+- **The registry is deployed by hand after the publish**, not before. A user who runs
+  `npx @botharness/botui add` gets files from `ui.botharness.ai`, not from npm, so an
+  npm version that is live while its registry item is not would install nothing. The
+  release script prints the deploy command for exactly this reason.
+- **Packages publish in dependency order.** `@botharness/botui-react` depends on
+  `@botharness/botui-core` as `workspace:*`, which pnpm rewrites to a real version on
+  publish; the reverse order would put a resolvable-looking version on npm that depends
+  on nothing.
+- **The registry is never committed**, so a release cannot ship a stale one — there is
+  nothing stale to ship.

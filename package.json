@@ -16,7 +16,8 @@
     "registry:build": "node scripts/build-registry.mjs",
     "registry:check": "node scripts/check-registry.mjs --strict",
     "verify": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm test && pnpm registry:check",
-    "site:build": "node scripts/build-site.mjs"
+    "site:build": "node scripts/build-site.mjs",
+    "release": "node scripts/release.mjs"
   },
   "devDependencies": {
     "@types/node": "^22.20.2",

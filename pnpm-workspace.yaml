@@ -1,6 +1,12 @@
 packages:
   - packages/*
   - apps/*
+
+# pnpm-only setting, kept here rather than in .npmrc: npm warns about unknown project
+# config keys, and anyone who runs npm in this repo should not see a warning from a
+# setting that has nothing to do with them
 allowBuilds:
   esbuild: set this to true or false
   workerd: set this to true or false
+
+linkWorkspacePackages: true

@@ -91,7 +91,7 @@ pnpm verify           # format, lint, typecheck, test, registry check
 
 The generated registry is never committed. A hand-maintained JSON carrying a copy of the source is a second source of truth that goes stale the first time a line changes upstream; `scripts/check-registry.mjs` exists to keep that from ever being possible, and it fails the build on an undeclared import, an escaping target, a missing dependency or a stale served item.
 
-## Deploying the site
+## Deploying and releasing
 
 The registry is served from a Cloudflare Worker on `ui.botharness.ai`:
 
@@ -99,6 +99,16 @@ The registry is served from a Cloudflare Worker on `ui.botharness.ai`:
 pnpm build
 pnpm --filter botui-site deploy   # or: wrangler deploy -c apps/site/wrangler.jsonc
 ```
+
+Releasing to npm:
+
+```bash
+pnpm release            # build + verify, then print what it would publish
+pnpm release -- --yes   # publish, in dependency order
+```
+
+The registry is what `npx` installs from, so it is deployed _after_ the npm publish —
+a version on npm whose registry item does not exist yet would install nothing.
 
 ## License
 
