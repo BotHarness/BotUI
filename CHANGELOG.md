@@ -35,6 +35,21 @@ All notable changes to BotUI are recorded here. The format follows
   and assert the field changed. A slider that renders and does nothing is indistinguishable from one
   that works, in a screenshot and in a DOM dump.
 
+### Fixed
+
+- **Three playground sliders were broken in the same way, and none of the tests could see
+  it.** `radius`, `aspect` and `speed` passed the raw 0…1 option against a track measured in
+  hundredths. Radius `0.7` on a `0…90` track put the thumb at 0.8% of the travel, which is why
+  it felt stuck; `speed` 1 on a `5…300` track and `aspect` 1 on a `20…100` track were both
+  silently clamped to their minimum by the browser, which is why they felt inert. The ×100 now
+  lives in one `PercentSlider` component, so no call site can get the scale wrong.
+- The radius slider's top end is now the polygon's own inradius, so dragging it all the way
+  always produces a circle — for a triangle (50%), a square (71%) and a pentagon (81%) alike. A
+  fixed 90% was unreachable for some shapes and meaningless for others.
+- Two audits in `apps/site/test/playground.test.tsx` compare each slider's thumb against the
+  number printed beside it, and its requested value against its declared range. Both were
+  verified by reintroducing the defect.
+
 ## [0.1.0] — 2026-09-30
 
 ### Added

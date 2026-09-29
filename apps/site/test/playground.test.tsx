@@ -210,3 +210,148 @@ describe("the playground controls", () => {
     expect(container.querySelector(".playground-note")?.textContent).toMatch(/refuses it/);
   });
 });
+
+describe("every slider represents the value it shows", () => {
+  /**
+   * The audit that was missing.
+   *
+   * Three sliders were passing a raw 0…1 fraction against a track measured in
+   * hundredths. The field DID change when they were dragged — the handler was wired
+   * and the geometry moved — so every "does this control do anything" test passed. What
+   * was broken is that the THUMB sat at the wrong place: radius 0.7 on a 0…90 track
+   * reads as 0.8% of the travel, which is why it felt stuck, and speed 1 on a 5…300
+   * track clamps to the minimum, which is why it felt inert.
+   *
+   * So the assertion is not "the field changed" but "the control's position is inside
+   * its own declared range, and matches the number in the label". A slider outside its
+   * range is a slider lying about where it is.
+   */
+  const thumbFor = (shown: string): number | null => {
+    const trimmed = shown.trim();
+    const percent = /^(-?\d+(?:\.\d+)?)%/.exec(trimmed);
+    if (percent) return Math.round(Number(percent[1]));
+    const times = /^(-?\d+(?:\.\d+)?)×/.exec(trimmed);
+    if (times) return Math.round(Number(times[1]) * 100);
+    return null;
+  };
+
+  const rows = () =>
+    [...container.querySelectorAll(".playground-field")].map((row) => {
+      const label = row.querySelector("span")?.textContent ?? "";
+      const input = row.querySelector("input[type=range]") as HTMLInputElement | null;
+      const shown = row.querySelector("em")?.textContent ?? "";
+      return { label, shown, input };
+    });
+
+  it("every slider thumb agrees with the number its label reports", () => {
+    /**
+     * The audit, in one assertion.
+     *
+     * Three sliders were passing a raw 0…1 fraction against a track measured in
+     * hundredths: radius 0.7 on a 0…90 track (thumb at 0.8% of travel — it looked
+     * stuck), aspect 1 on a 20…100 track, and speed 1 on a 5…300 track (clamped to
+     * the minimum — it looked inert).
+     *
+     * Two things make this hard to catch by the obvious test. First, "does dragging it
+     * change the field" PASSES for all three: the handler is wired and the geometry
+     * does move once a value arrives. Second, "is the value inside min/max" also
+     * passes, because the BROWSER clamps the value before the DOM can be read — the
+     * defect is invisible from inside the element.
+     *
+     * So the check compares two things the user can see at once: the thumb, and the
+     * number printed beside it. Labels that are not a plain percentage or multiplier
+     * (a px size, a count, a shape name) are skipped — there is nothing to compare.
+     *
+     * The two suffixes do not mean the same thing, and the test has to know it: a `%`
+     * label is already in track units ("55%" is thumb 55), while a `×` label is the raw
+     * option shown as a decimal ("1.00×" is 1, which is thumb 100). That inconsistency
+     * is the component's — speed is a multiplier, everything else is a proportion — and
+     * encoding it here is what stops the audit from crying wolf on seven controls.
+     */
+    const offenders: string[] = [];
+    for (const { label, shown, input } of rows()) {
+      if (!input || !shown) continue;
+      const expected = thumbFor(shown);
+      if (expected === null) continue;
+      const actual = Number(input.value);
+      if (Math.abs(actual - expected) > 1) {
+        offenders.push(
+          `${label.trim()}: label "${shown}" means ${expected} on the track, thumb is at ${actual}`,
+        );
+      }
+    }
+    expect(
+      offenders,
+      `a slider whose thumb and label disagree — it reads as broken:\n  ${offenders.join("\n  ")}`,
+    ).toEqual([]);
+  });
+
+  it("the browser never has to clamp a slider to make it legal", () => {
+    // same failure from the other side: a value below `min` is accepted by the DOM and
+    // silently clamped, so the test has to compare what React ASKED for against the
+    // range it declared
+    const offenders: string[] = [];
+    for (const { label, shown, input } of rows()) {
+      if (!input || !shown) continue;
+      const requested = thumbFor(shown);
+      if (requested === null) continue;
+      const min = Number(input.getAttribute("min"));
+      const max = Number(input.getAttribute("max"));
+      if (requested < min || requested > max) {
+        offenders.push(`${label.trim()}: wants ${requested}, declares [${min}, ${max}]`);
+      }
+    }
+    expect(
+      offenders,
+      `a slider whose own value is out of its declared range:\n  ${offenders.join("\n  ")}`,
+    ).toEqual([]);
+  });
+
+  it("the radius slider spans exactly 0 to the polygon inradius, so full travel is a circle", () => {
+    const input = slider(/radius/i);
+    const max = Number(input.getAttribute("max"));
+    // a square's inradius is cos(pi/4) = 0.707, so the top of the travel is 71%
+    expect(max).toBe(71);
+    drag(input, max);
+    const atMax = field()[0]?.d ?? "";
+    expect(atMax, "the top of the travel must be a rounded polygon").toContain("Q");
+    drag(input, 0);
+    expect(field()[0]?.d ?? "", "the bottom of the travel must be hard corners").not.toContain("Q");
+  });
+
+  it("the radius slider retunes itself when the side count changes", () => {
+    // a triangle's inradius is 0.5 and a pentagon's is 0.809, so a fixed maximum would
+    // be unreachable for one and meaningless for the other
+    const radius = () => slider(/radius/i);
+    expect(Number(radius().getAttribute("max"))).toBe(71); // square
+    drag(slider(/sides/i), 3);
+    expect(Number(radius().getAttribute("max"))).toBe(50); // triangle
+    drag(slider(/sides/i), 5);
+    expect(Number(radius().getAttribute("max"))).toBe(81); // pentagon
+  });
+
+  it("dragging radius visibly rounds the dot, corner by corner", () => {
+    // the reason it "felt stuck" was also that the effect is subtle at dot sizes; this
+    // pins that the geometry really does move, so a future regression is not a matter
+    // of opinion
+    const input = slider(/radius/i);
+    const cornerAt = (v: number) => {
+      drag(input, v);
+      return field()[0]?.d ?? "";
+    };
+    const square = cornerAt(0);
+    const rounded = cornerAt(35);
+    expect(square).not.toBe(rounded);
+    // the flat between the corners shortens as the fillet grows
+    expect(square.startsWith("M0.7071"), square.slice(0, 24)).toBe(true);
+    expect(rounded.startsWith("M0.3"), rounded.slice(0, 24)).toBe(true);
+  });
+
+  it("the speed slider starts where the option says it does", () => {
+    const input = slider(/speed/i);
+    // default speed 1 on a 5…300 track: the thumb must be at 100, not clamped to 5
+    expect(Number(input.value)).toBe(100);
+    drag(input, 300);
+    expect(readout()).toContain("speed 3.00×");
+  });
+});

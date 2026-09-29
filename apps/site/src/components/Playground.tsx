@@ -7,6 +7,7 @@ import {
   PRESET_KEYS,
   SILHOUETTE_KEYS,
   cssRenderable,
+  glyphPath,
   dotShareOfPitch,
   layout,
   touchingDotSize,
@@ -123,23 +124,24 @@ export function Playground() {
               label: DOT_SHAPES[key as keyof typeof DOT_SHAPES].label,
             }))}
           />
-          <Slider
+          {/* the top of this travel is the polygon's OWN inradius, so dragging it
+              all the way always gives a circle — for a triangle, a square and a
+              pentagon alike. A fixed 90% would be unreachable for some shapes and
+              meaningless for others. */}
+          <PercentSlider
             label="圆角 radius"
-            value={options.spec?.radius ?? 0}
-            min={0}
-            max={90}
-            step={1}
-            display={percent(options.spec?.radius ?? 0)}
-            onChange={(percentValue) => setSpec({ radius: percentValue / 100 })}
+            fraction={options.spec?.radius ?? 0}
+            max={Math.round(inradiusOf(sides) * 100)}
+            display={`${Math.round((options.spec?.radius ?? 0) * 100)}% of ${Math.round(inradiusOf(sides) * 100)}%`}
+            onChange={(radius) => setSpec({ radius })}
           />
-          <Slider
+          <PercentSlider
             label="拉伸 aspect"
-            value={options.spec?.aspect ?? 1}
+            fraction={options.spec?.aspect ?? 1}
             min={20}
             max={100}
-            step={1}
             display={percent(options.spec?.aspect ?? 1)}
-            onChange={(percentValue) => setSpec({ aspect: percentValue / 100 })}
+            onChange={(aspect) => setSpec({ aspect })}
           />
         </Group>
 
@@ -210,25 +212,20 @@ export function Playground() {
             onChange={(preset) => set({ preset: preset as PresetName })}
             options={PRESET_KEYS.map((key) => ({ value: key, label: key }))}
           />
-          <Slider
+          <PercentSlider
             label="速度 speed"
-            value={options.speed ?? 1}
+            fraction={options.speed ?? 1}
             min={5}
             max={300}
-            step={1}
             display={`${(options.speed ?? 1).toFixed(2)}×`}
-            onChange={(v) => set({ speed: v / 100 })}
+            onChange={(speed) => set({ speed })}
           />
-          <Slider
+          <PercentSlider
             label="错峰 stagger"
-            value={Math.round(
-              (options.stagger ?? PRESETS[options.preset ?? "spiral"]!.spread) * 100,
-            )}
-            min={0}
+            fraction={options.stagger ?? PRESETS[options.preset ?? "spiral"]!.spread}
             max={200}
-            step={1}
             display={options.stagger == null ? "预设" : `${(options.stagger * 100).toFixed(0)}%`}
-            onChange={(v) => set({ stagger: v / 100 })}
+            onChange={(stagger) => set({ stagger })}
           />
           <Slider
             label="波宽 softness"
@@ -341,6 +338,51 @@ function Select({
       </select>
     </label>
   );
+}
+
+/**
+ * A slider for a 0…1 option.
+ *
+ * The ×100 lives here, once. Three sliders were passing the raw fraction against a
+ * track measured in hundredths — radius 0.7 on a 0…90 track, which pins the thumb at
+ * the far left and makes the control look dead, and speed 1 on a 5…300 track, which
+ * clamps to the minimum and reads as "no effect". A test that only checked "the field
+ * changed" passed all three, because the field does change once a value arrives; the
+ * defect was in where the THUMB sat, which nothing looked at.
+ */
+function PercentSlider({
+  label,
+  fraction,
+  min = 0,
+  max = 100,
+  step = 1,
+  display,
+  onChange,
+}: {
+  label: string;
+  fraction: number;
+  min?: number;
+  max?: number;
+  step?: number;
+  display?: string;
+  onChange: (fraction: number) => void;
+}) {
+  return (
+    <Slider
+      label={label}
+      value={Math.round(Math.min(Math.max(fraction, 0), 1) * 100)}
+      min={min}
+      max={max}
+      step={step}
+      display={display ?? percent(fraction)}
+      onChange={(v) => onChange(v / 100)}
+    />
+  );
+}
+
+/** the radius at which this polygon's corners are fully rounded — a true circle */
+function inradiusOf(sides: number): number {
+  return glyphPath({ sides }).inradius;
 }
 
 function Slider({
