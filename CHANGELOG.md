@@ -34,7 +34,6 @@ All notable changes to BotUI are recorded here. The format follows
 - `apps/site/test/playground.test.tsx` drives the real controls: ten tests that dispatch input events
   and assert the field changed. A slider that renders and does nothing is indistinguishable from one
   that works, in a screenshot and in a DOM dump.
-
 - **The site is bilingual.** English at `/` and Chinese at `/zh/`, from Paraglide message
   catalogs under `apps/site/messages/`, with a real link between them, per-page `hreflang`, and a
   `<html lang>` that matches the copy. The switch is a link to the other locale's file rather
@@ -57,9 +56,6 @@ All notable changes to BotUI are recorded here. The format follows
 - Two audits in `apps/site/test/playground.test.tsx` compare each slider's thumb against the
   number printed beside it, and its requested value against its declared range. Both were
   verified by reintroducing the defect.
-
-### Fixed
-
 - **The stagger dial was a one-way door.** Its default is the _preset's_ spread, so once
   dragged, `stagger` was a number forever: the label stopped saying "preset", switching the
   preset no longer moved the dial, and nothing on screen offered a way back. It now shows the
@@ -69,6 +65,19 @@ All notable changes to BotUI are recorded here. The format follows
   start. Anchoring the match to the start meant the one slider whose default comes from a preset
   was the one slider the audit skipped — which is how a label reading only "preset" survived
   while its thumb sat at 95.
+- **The Chinese page reverted to English the moment it finished loading.** The server-rendered
+  markup was correct, because the SSG middleware sets the locale outright, but every island
+  resolved its own copy from the URL — and the default locale's URL pattern was the catch-all
+  `/:path(.*)?`, which also matches `/zh/` by reading "zh" as a path segment. Paraglide takes
+  the first pattern that matches, so English won every URL. The default locale's pattern is now
+  `/` exactly, and `apps/site/test/locale-resolution.test.tsx` renders the playground at both
+  URLs and asserts copy that exists in only one catalog. The section headings could not have
+  caught it: they are bilingual in both catalogs, so the page only _looked_ half translated.
+- The Paraglide compiler options were written down twice — in `astro.config.mjs` and in
+  `project.inlang/paraglide.config.js` — and the copies had already drifted, with the standalone
+  config still placing English at `/en/` while Astro had been writing it to `/`. A
+  `paraglide compile` run from the CLI would have generated a runtime that disagreed with the
+  one that ships. Both now read `project.inlang/paraglide.options.js`.
 
 ## [0.1.0] — 2026-09-30
 

@@ -1,26 +1,14 @@
 /**
- * Paraglide compiler options, read from here by the CLI and by every bundler plugin.
+ * The compiler options for a standalone `paraglide compile`.
  *
- * `strategy` order matters: `globalVariable` has to come before `baseLocale` so
- * `setLocale()` can hold the locale during a STATIC render. With no browser there is
- * nothing to read `window.location` from, and the SSG middleware sets the locale
- * explicitly before each page renders.
- *
- * Every locale is URL-prefixed, which SSG requires: `/en/` and `/zh/` have to be two
- * different files on disk, so there is no such thing as "the same path, two languages"
- * without a request to vary on.
+ * They live in `paraglide.options.js` because `astro.config.mjs` compiles with the
+ * same ones — see that file for why they must not be written twice.
  */
+import { emitTsDeclarations, strategy, urlPatterns } from "./paraglide.options.js";
+
 export default {
   outdir: "./src/paraglide",
-  emitTsDeclarations: true,
-  strategy: ["url", "globalVariable", "baseLocale"],
-  urlPatterns: [
-    {
-      pattern: "/:path(.*)?",
-      localized: [
-        ["en", "/en/:path(.*)?"],
-        ["zh", "/zh/:path(.*)?"],
-      ],
-    },
-  ],
+  emitTsDeclarations,
+  strategy,
+  urlPatterns,
 };

@@ -27,15 +27,14 @@ BotUI 的所有值得注意的变更都记录在此。格式遵循
 - 引擎导出 `cssRenderable()` / `cssRenderGap()`，调用方直接问组件 CSS 渲染器能否表达某个动效，
   而不是自己重写这条规则。playground 之前检查的是 preset **是否存在**，所以 `columns`（per-dot
   delay 无法表达的动效）的复选框仍然是可勾选状态。
-- `apps/site/test/playground.test.tsx` 驱动真实控件：10 个测试派发 input 事件并断言场确实变了。
-  一个渲染出来但不干活的滑杆，在截图和 DOM dump 里和一个正常工作的滑杆无法区分。
-
 - **站点现在支持双语。** 英文在 `/`，中文在 `/zh/`，文案来自 `apps/site/messages/` 下的 Paraglide
   消息目录；两个语言之间是真实链接，页面带各自的 `hreflang`，`<html lang>` 与文案一致。切换器
   指向另一个语言的**文件**，而不是客户端 toggle —— 这样关掉 JavaScript 也能到达 `/zh/`，搜索引擎
   也能抓到。
 - `pnpm i18n` 编译消息目录。`apps/site/src/paraglide` 是生成产物且被 gitignore，因此 `typecheck`
   和 `verify` 现在会先跑这一步：全新 clone 时它们原本会因为引用尚不存在的文件而失败。
+- `apps/site/test/playground.test.tsx` 驱动真实控件：10 个测试派发 input 事件并断言场确实变了。
+  一个渲染出来但不干活的滑杆，在截图和 DOM dump 里和一个正常工作的滑杆无法区分。
 
 ### 修复
 
@@ -49,8 +48,6 @@ BotUI 的所有值得注意的变更都记录在此。格式遵循
 - `apps/site/test/playground.test.tsx` 里新增两条审计：把每个滑杆的滑块位置和它旁边的数字
   对照，把请求值和声明范围对照。两条都通过"重新植入缺陷"验证过确实会失败。
 
-### 修复
-
 - **错峰滑杆是单向门。** 它的默认值来自 _preset_ 的 spread，所以一旦拖动，`stagger` 就永远
   是个数字：标签不再显示"预设"、切换 preset 也不再带动滑杆，而且界面上没有任何回去的入口。
   现在标签显示 preset 自身的数值（`预设 95%`，因此标签永远不会和滑块矛盾），并且在值被覆盖
@@ -58,6 +55,17 @@ BotUI 的所有值得注意的变更都记录在此。格式遵循
 - 滑杆审计现在在标签**任意位置**找百分比，而不再只匹配开头。只匹配开头意味着"默认值来自
   preset 的那个滑杆"恰好是审计唯一跳过的滑杆 —— 这就是为什么只写着"预设"、滑块却停在 95 的
   标签能一直存在。
+- **中文页面一加载完就退回英文。** 服务端渲染出的 HTML 是对的，因为 SSG middleware 直接设置了
+  locale；但每个 island 自己从 URL 解析文案，而默认语言的 URL pattern 是通配的 `/:path(.*)?`，
+  它同样能匹配 `/zh/` —— 把 "zh" 当成路径段读走了。Paraglide 取第一个匹配的 pattern，于是英文
+  赢下所有 URL。现在默认语言的 pattern 精确为 `/`，并且
+  `apps/site/test/locale-resolution.test.tsx` 会在两个 URL 下分别渲染 playground，断言只在其中一个
+  目录里存在的文案。区块标题本来抓不到这个问题：它们在两个目录里都是双语的，所以页面看起来只是
+  「翻译了一半」。
+- Paraglide 的编译选项被写了两份 —— `astro.config.mjs` 和 `project.inlang/paraglide.config.js`
+  —— 而且两份已经漂移：独立那份仍把英文放在 `/en/`，而 Astro 一直写在 `/`。从 CLI 跑一次
+  `paraglide compile` 就会生成一个与线上不一致的 runtime。现在两份都读
+  `project.inlang/paraglide.options.js`。
 
 ## [0.1.0] — 2026-09-30
 

@@ -2,6 +2,7 @@
 import { defineConfig } from "astro/config";
 import react from "@astrojs/react";
 import { paraglideVitePlugin } from "@inlang/paraglide-js";
+import * as paraglideOptions from "./project.inlang/paraglide.options.js";
 
 /**
  * Static output, no adapter.
@@ -32,27 +33,14 @@ export default defineConfig({
   vite: {
     ssr: { noExternal: ["@botharness/botui-core"] },
     plugins: [
-      // Options are given EXPLICITLY here rather than left to
-      // project.inlang/paraglide.config.js, because the CLI and the plugin must
-      // produce identical output — a `pnpm paraglide compile` that disagrees with
-      // `astro build` means the type declarations describe a different runtime
-      // than the one that ships.
+      // Options come from project.inlang/paraglide.options.js, which the standalone
+      // CLI compile reads too, so the plugin and `pnpm --filter botui-site
+      // i18n:compile` cannot produce two different runtimes. Only `outdir` is spelled
+      // out here: it is a path relative to the bundler's CWD, not to the project.
       paraglideVitePlugin({
         project: "./project.inlang",
         outdir: "./src/paraglide",
-        emitTsDeclarations: true,
-        // `globalVariable` must come before `baseLocale` so setLocale() can hold the
-        // locale during a STATIC render — there is no browser to read a URL from
-        strategy: ["url", "globalVariable", "baseLocale"],
-        urlPatterns: [
-          {
-            pattern: "/:path(.*)?",
-            localized: [
-              ["en", "/:path(.*)?"],
-              ["zh", "/zh/:path(.*)?"],
-            ],
-          },
-        ],
+        ...paraglideOptions,
       }),
     ],
   },
