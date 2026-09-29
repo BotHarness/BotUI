@@ -379,6 +379,11 @@ footer {
   /* the field is sized in px by the component; the pane must not stretch it */
   overflow: hidden;
   color: var(--ink);
+  /* The control column is far taller than the field, so on a wide screen the field
+     would sit stranded at the top with a column of empty space beside it. Sticky
+     keeps the thing you are adjusting in view while you drag the thing adjusting it. */
+  position: sticky;
+  top: 20px;
 }
 
 .playground-controls {
@@ -457,4 +462,39 @@ footer {
   .playground {
     grid-template-columns: 1fr;
   }
+
+  /* sticky is a two-column idea; stacked, it would pin the field over the controls */
+  .playground-stage {
+    position: static;
+  }
+}
+
+/* the playground is the first thing after the install command, so it reads as the
+   page's subject rather than as a section further down */
+.playground-section {
+  padding-top: 8px;
+  border-bottom: 0;
+}
+
+.playground-group {
+  border: 0;
+  border-top: 1px solid var(--line);
+  margin: 0;
+  padding: 12px 0 0;
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+
+.playground-group:first-of-type {
+  border-top: 0;
+  padding-top: 0;
+}
+
+.playground-group legend {
+  color: var(--muted);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  padding: 0 6px 0 0;
 }

@@ -34,19 +34,18 @@ import { RegistryList } from '../components/RegistryList';
       </p>
     </section>
 
+    <!-- the playground sits directly under the install command on purpose: the point of
+         the page is to let you drag the thing you are about to install, so putting a
+         component index between the two would be a detour. `client:load` rather than
+         `client:visible` for the same reason — it must be interactive on arrival. -->
+    <section id="playground" class="playground-section">
+      <Playground client:load />
+    </section>
+
     <section id="components">
       <h2>Components</h2>
       <p class="fine">Read from <code>/registry.json</code> — the same document the CLI installs from.</p>
       <RegistryList client:visible />
-    </section>
-
-    <section id="playground">
-      <h2>The dot matrix, live</h2>
-      <p class="fine">
-        The component running on this page, from <code>@botharness/botui-core</code> —
-        the same implementation the registry ships. Every layer is a control.
-      </p>
-      <Playground client:visible />
     </section>
 
     <section>

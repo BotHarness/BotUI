@@ -72,6 +72,8 @@ export {
   PRESET_KEYS,
   STATE_KEYS,
   STATE_PRESETS,
+  cssRenderGap,
+  cssRenderable,
   presetFor,
   presetForState,
   resolvePreset,

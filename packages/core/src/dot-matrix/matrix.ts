@@ -2,7 +2,7 @@ import type { DotMatrixHandle, DotMatrixOptions, DotRecord } from "../types.js";
 import { resolveOptions } from "./layout.js";
 import { applyCssVars, buildCss, buildSvg, field, resolveField } from "./field.js";
 import { ensureStylesheet } from "./css.js";
-import { presetFor } from "./presets.js";
+import { cssRenderGap } from "./presets.js";
 
 /** the frame a reduced-motion field rests on: representative, not the first one */
 const REST_FRAME = 0.18;
@@ -135,10 +135,7 @@ export function createDotMatrix(
       element.replaceChildren();
     },
     cssGap() {
-      const preset = presetFor(live.preset);
-      if (!preset) return "preset off";
-      if (!preset.css) return "moving highlight — no CSS equivalent";
-      return null;
+      return cssRenderGap(live.preset);
     },
   };
 

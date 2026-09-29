@@ -2,12 +2,15 @@ import { useMemo, useState } from "react";
 import {
   DOT_SHAPES,
   DOT_SHAPE_KEYS,
+  GLYPH_DEFAULTS,
   PRESETS,
   PRESET_KEYS,
   SILHOUETTE_KEYS,
+  cssRenderable,
   dotShareOfPitch,
   layout,
   touchingDotSize,
+  type DotGlyphSpec,
   type DotMatrixOptions,
   type DotShape,
   type PresetName,
@@ -16,17 +19,22 @@ import {
 import { Matrix } from "./Matrix";
 
 /**
- * The playground: every layer the component exposes, on one field.
+ * The playground: every layer the component exposes, on one field, all of it draggable.
  *
- * The readout is the point, not the sliders. `dot / cell` and `dot / pitch` are
- * different numbers and only one of them means anything to the eye — 100% of the
- * PITCH is two dots touching, and that point moves when the gap changes. Showing
- * both, and the value at which they coincide, is what stops the dial from being
- * mysterious.
+ * The two shapes are sliders rather than dropdowns on purpose. A dot is a POLYGON plus
+ * two corner radii — `sides: 3` is a triangle, `sides: 6` a hexagon — so the honest
+ * control is the number, and dragging it is how you find out that a 7-gon is a
+ * heptagon. The named glyphs are presets over that number, so they stay available as a
+ * second control for the shapes `sides` cannot reach: a star is a notch between the
+ * points, and a bar is an aspect ratio.
+ *
+ * The readout matters as much as the sliders. `dot / cell` and `dot / pitch` are
+ * different numbers and only one of them means anything to the eye: 100% of the PITCH
+ * is two dots touching, and that point moves when the gap changes.
  */
 export function Playground() {
   const [options, setOptions] = useState<DotMatrixOptions>({
-    size: 140,
+    size: 150,
     cols: 7,
     rows: 7,
     silhouette: "circle",
@@ -36,17 +44,24 @@ export function Playground() {
     gapX: 0.45,
     gapY: 0.45,
     preset: "spiral",
+    speed: 1,
+    grow: 0.5,
     softness: 0,
+    stagger: null,
     renderer: "svg",
-    // The component's own default floor is 0.16, which is deliberately almost-dark:
-    // an indicator should not shout. On a dark page at 140px that reads as an EMPTY
-    // box, though, and a demo nobody can see is not a demo. The floor is a demo
-    // choice, not a component change — the slider below moves it.
+    // The component's own default floor is 0.16, which is deliberately almost-dark: an
+    // indicator should not shout. On a dark page at 150px that reads as an EMPTY box,
+    // though, and a demo nobody can see is not a demo. A demo choice, not a component
+    // change — the floor slider below moves it.
     floor: 0.32,
   });
   const [cssRenderer, setCssRenderer] = useState(false);
 
   const set = (patch: Partial<DotMatrixOptions>) => setOptions((o) => ({ ...o, ...patch }));
+
+  /** drive the polygon directly, which is what the `sides` slider is */
+  const setSpec = (patch: Partial<DotGlyphSpec>) =>
+    set({ dot: "custom", spec: { ...GLYPH_DEFAULTS, ...options.spec, ...patch } });
 
   const geometry = useMemo(() => layout(options), [options]);
   const pitchShare = dotShareOfPitch(
@@ -55,10 +70,14 @@ export function Playground() {
   );
   const touching = touchingDotSize(Math.max(options.gapX ?? 0, options.gapY ?? 0));
 
-  // a motion the CSS renderer cannot express has to be refused, not silently
-  // approximated — the page says so instead of showing the wrong animation
-  const cssGap = PRESETS[options.preset ?? "spiral"];
-  const cssAvailable = Boolean(cssGap);
+  // a motion the CSS renderer cannot express has to be refused, not approximated — the
+  // page says so instead of showing a different animation under the same name
+  // the engine's own rule, not a re-statement of it: a caller that checks whether the
+  // preset EXISTS instead of whether the renderer can EXPRESS it leaves the checkbox
+  // enabled for a motion that has no CSS form
+  const cssAvailable = cssRenderable(options.preset);
+  const silhouetteIndex = Math.max(0, SILHOUETTE_KEYS.indexOf(options.silhouette ?? "square"));
+  const sides = options.spec?.sides ?? GLYPH_DEFAULTS.sides;
 
   return (
     <div className="playground">
@@ -66,118 +85,179 @@ export function Playground() {
         <Matrix
           {...options}
           renderer={cssRenderer ? "css" : "svg"}
-          key={`${options.preset}-${options.silhouette}-${options.cols}x${options.rows}`}
+          key={`${options.preset}-${options.silhouette}-${options.cols}x${options.rows}-${options.dot}`}
         />
       </div>
 
       <div className="playground-controls">
-        <Field label="preset" hint={PRESETS[options.preset ?? "spiral"]?.task}>
-          <select
-            value={options.preset}
-            onChange={(e) => set({ preset: e.target.value as PresetName })}
-          >
-            {PRESET_KEYS.map((key) => (
-              <option key={key} value={key}>
-                {key}
-              </option>
-            ))}
-          </select>
-        </Field>
-
-        <Field label="silhouette">
-          <select
-            value={options.silhouette}
-            onChange={(e) => set({ silhouette: e.target.value as Silhouette })}
-          >
-            {SILHOUETTE_KEYS.map((key) => (
-              <option key={key} value={key}>
-                {key}
-              </option>
-            ))}
-          </select>
-        </Field>
-
-        <Field label="dot">
-          <select
+        <Group label="shape · 形状">
+          <Slider
+            label="整体 silhouette"
+            value={silhouetteIndex}
+            min={0}
+            max={SILHOUETTE_KEYS.length - 1}
+            step={1}
+            display={options.silhouette ?? "square"}
+            onChange={(i) => set({ silhouette: SILHOUETTE_KEYS[i] as Silhouette })}
+          />
+          <Slider
+            label="点 sides"
+            value={sides}
+            min={3}
+            max={10}
+            step={1}
+            display={POLYGON_NAMES[sides] ?? `${sides}-gon`}
+            onChange={(n) => setSpec({ sides: n })}
+          />
+          <Select
+            label="点预设 glyph"
             value={options.dot}
-            onChange={(e) => {
-              const dot = e.target.value as DotShape;
-              set({ dot, spec: { ...DOT_SHAPES[dot as keyof typeof DOT_SHAPES].spec } });
-            }}
-          >
-            {DOT_SHAPE_KEYS.map((key) => (
-              <option key={key} value={key}>
-                {DOT_SHAPES[key as keyof typeof DOT_SHAPES].label}
-              </option>
-            ))}
-          </select>
-        </Field>
+            onChange={(dot) =>
+              set({
+                dot: dot as DotShape,
+                spec: { ...DOT_SHAPES[dot as keyof typeof DOT_SHAPES].spec },
+              })
+            }
+            options={DOT_SHAPE_KEYS.map((key) => ({
+              value: key,
+              label: DOT_SHAPES[key as keyof typeof DOT_SHAPES].label,
+            }))}
+          />
+          <Slider
+            label="圆角 radius"
+            value={options.spec?.radius ?? 0}
+            min={0}
+            max={90}
+            step={1}
+            display={percent(options.spec?.radius ?? 0)}
+            onChange={(percentValue) => setSpec({ radius: percentValue / 100 })}
+          />
+          <Slider
+            label="拉伸 aspect"
+            value={options.spec?.aspect ?? 1}
+            min={20}
+            max={100}
+            step={1}
+            display={percent(options.spec?.aspect ?? 1)}
+            onChange={(percentValue) => setSpec({ aspect: percentValue / 100 })}
+          />
+        </Group>
 
-        <Slider
-          label="size"
-          value={options.size ?? 140}
-          min={24}
-          max={220}
-          step={1}
-          display={`${options.size}px`}
-          onChange={(size) => set({ size })}
-        />
-        {/* two sliders, not one encoding "7x7" in a range input: Number("7x7") is NaN,
-            so the combined control silently set both axes to NaN on the first drag */}
-        <Slider
-          label="cols"
-          value={options.cols ?? 7}
-          min={1}
-          max={14}
-          step={1}
-          display={String(options.cols)}
-          onChange={(cols) => set({ cols })}
-        />
-        <Slider
-          label="rows"
-          value={options.rows ?? 7}
-          min={1}
-          max={14}
-          step={1}
-          display={String(options.rows)}
-          onChange={(rows) => set({ rows })}
-        />
-        <Slider
-          label="dot / cell"
-          value={Math.round((options.dotSize ?? 0.55) * 100)}
-          min={5}
-          max={200}
-          step={1}
-          display={`${Math.round((options.dotSize ?? 0.55) * 100)}%`}
-          onChange={(v) => set({ dotSize: v / 100 })}
-        />
-        <Slider
-          label="gap x"
-          value={Math.round((options.gapX ?? 0) * 100)}
-          min={0}
-          max={200}
-          step={5}
-          display={`${((options.gapX ?? 0) * 100).toFixed(0)}%`}
-          onChange={(v) => set({ gapX: v / 100 })}
-        />
-        <Slider
-          label="gap y"
-          value={Math.round((options.gapY ?? 0) * 100)}
-          min={0}
-          max={200}
-          step={5}
-          display={`${((options.gapY ?? 0) * 100).toFixed(0)}%`}
-          onChange={(v) => set({ gapY: v / 100 })}
-        />
-        <Slider
-          label="softness"
-          value={Math.round((options.softness ?? 0) * 100)}
-          min={0}
-          max={100}
-          step={1}
-          display={`${Math.round((options.softness ?? 0) * 100)}%`}
-          onChange={(v) => set({ softness: v / 100 })}
-        />
+        <Group label="size · 尺寸">
+          <Slider
+            label="size"
+            value={options.size ?? 150}
+            min={24}
+            max={260}
+            step={1}
+            display={`${options.size}px`}
+            onChange={(size) => set({ size })}
+          />
+          {/* two sliders, not one encoding "7x7" in a range input: Number("7x7") is NaN,
+                so the combined control silently set both axes to NaN on the first drag */}
+          <Slider
+            label="cols"
+            value={options.cols ?? 7}
+            min={1}
+            max={16}
+            step={1}
+            display={String(options.cols)}
+            onChange={(cols) => set({ cols })}
+          />
+          <Slider
+            label="rows"
+            value={options.rows ?? 7}
+            min={1}
+            max={16}
+            step={1}
+            display={String(options.rows)}
+            onChange={(rows) => set({ rows })}
+          />
+          <Slider
+            label="点占格 dot / cell"
+            value={Math.round((options.dotSize ?? 0.55) * 100)}
+            min={5}
+            max={200}
+            step={1}
+            display={`${Math.round((options.dotSize ?? 0.55) * 100)}%`}
+            onChange={(v) => set({ dotSize: v / 100 })}
+          />
+          <Slider
+            label="列 gap x"
+            value={Math.round((options.gapX ?? 0) * 100)}
+            min={0}
+            max={200}
+            step={5}
+            display={percent(options.gapX ?? 0)}
+            onChange={(v) => set({ gapX: v / 100 })}
+          />
+          <Slider
+            label="行 gap y"
+            value={Math.round((options.gapY ?? 0) * 100)}
+            min={0}
+            max={200}
+            step={5}
+            display={percent(options.gapY ?? 0)}
+            onChange={(v) => set({ gapY: v / 100 })}
+          />
+        </Group>
+
+        <Group label="motion · 动效">
+          <Select
+            label="preset"
+            value={options.preset}
+            hint={PRESETS[options.preset ?? "spiral"]?.task}
+            onChange={(preset) => set({ preset: preset as PresetName })}
+            options={PRESET_KEYS.map((key) => ({ value: key, label: key }))}
+          />
+          <Slider
+            label="速度 speed"
+            value={options.speed ?? 1}
+            min={5}
+            max={300}
+            step={1}
+            display={`${(options.speed ?? 1).toFixed(2)}×`}
+            onChange={(v) => set({ speed: v / 100 })}
+          />
+          <Slider
+            label="错峰 stagger"
+            value={Math.round(
+              (options.stagger ?? PRESETS[options.preset ?? "spiral"]!.spread) * 100,
+            )}
+            min={0}
+            max={200}
+            step={1}
+            display={options.stagger == null ? "预设" : `${(options.stagger * 100).toFixed(0)}%`}
+            onChange={(v) => set({ stagger: v / 100 })}
+          />
+          <Slider
+            label="波宽 softness"
+            value={Math.round((options.softness ?? 0) * 100)}
+            min={0}
+            max={100}
+            step={1}
+            display={`${Math.round((options.softness ?? 0) * 100)}%`}
+            onChange={(v) => set({ softness: v / 100 })}
+          />
+          <Slider
+            label="呼吸 grow"
+            value={Math.round((options.grow ?? 0.5) * 100)}
+            min={0}
+            max={100}
+            step={1}
+            display={percent(options.grow ?? 0.5)}
+            onChange={(v) => set({ grow: v / 100 })}
+          />
+          <Slider
+            label="底噪 floor"
+            value={Math.round((options.floor ?? 0.16) * 100)}
+            min={0}
+            max={100}
+            step={1}
+            display={percent(options.floor ?? 0.16)}
+            onChange={(v) => set({ floor: v / 100 })}
+          />
+        </Group>
 
         <label className="playground-check">
           <input
@@ -203,21 +283,48 @@ export function Playground() {
           `touching at  dot / cell = ${touching.toFixed(2)}`,
           `pitch        ${geometry.pitchX.toFixed(1)} × ${geometry.pitchY.toFixed(1)} px`,
           `dot          ${geometry.dotPx.toFixed(1)} px`,
-          `renderer     ${cssRenderer ? "css" : "svg"}`,
+          `silhouette   ${options.silhouette}   dot ${POLYGON_NAMES[sides] ?? `${sides}-gon`}`,
+          `renderer     ${cssRenderer ? "css" : "svg"}   speed ${(options.speed ?? 1).toFixed(2)}×`,
         ].join("\n")}
       </pre>
     </div>
   );
 }
 
-function Field({
+const POLYGON_NAMES: Record<number, string> = {
+  3: "triangle 三角",
+  4: "square 方",
+  5: "pentagon 五边",
+  6: "hexagon 六边",
+  7: "heptagon 七边",
+  8: "octagon 八边",
+  9: "nonagon 九边",
+  10: "decagon 十边",
+};
+
+const percent = (v: number) => `${Math.round(v * 100)}%`;
+
+function Group({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <fieldset className="playground-group">
+      <legend>{label}</legend>
+      {children}
+    </fieldset>
+  );
+}
+
+function Select({
   label,
+  value,
   hint,
-  children,
+  options,
+  onChange,
 }: {
   label: string;
+  value: string | undefined;
   hint?: string;
-  children: React.ReactNode;
+  options: { value: string; label: string }[];
+  onChange: (value: string) => void;
 }) {
   return (
     <label className="playground-field">
@@ -225,7 +332,13 @@ function Field({
         {label}
         {hint && <em>{hint}</em>}
       </span>
-      {children}
+      <select value={value} onChange={(e) => onChange(e.target.value)}>
+        {options.map((option) => (
+          <option key={option.value} value={option.value}>
+            {option.label}
+          </option>
+        ))}
+      </select>
     </label>
   );
 }
@@ -240,7 +353,7 @@ function Slider({
   onChange,
 }: {
   label: string;
-  value: number | string;
+  value: number;
   min: number;
   max: number;
   step: number;

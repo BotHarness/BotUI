@@ -72,6 +72,26 @@ export function resolvePreset(name: PresetName) {
   };
 }
 
+/**
+ * Whether the CSS renderer can express this motion at all.
+ *
+ * A per-dot `animation-delay` can only OFFSET a dot's phase; a highlight MOVING down
+ * a column is not a phase offset. The rule belongs here rather than in a caller,
+ * because a caller that gets it wrong does not fail — buildCss returns null, the
+ * previous renderer stays on screen, and the control claims a mode it is not in.
+ */
+export function cssRenderable(name: PresetName | undefined): boolean {
+  return presetFor(name)?.css === true;
+}
+
+/** why the CSS renderer cannot express it, or null if it can */
+export function cssRenderGap(name: PresetName | undefined): string | null {
+  const preset = presetFor(name);
+  if (!preset) return "preset off";
+  if (!preset.css) return "moving highlight — no CSS equivalent";
+  return null;
+}
+
 /** the preset an agent state maps to, for the `<DotMatrix state="thinking">` shorthand */
 export function presetForState(state: AgentState | undefined): PresetName {
   if (!state) return "spiral";
