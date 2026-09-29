@@ -17,6 +17,22 @@ const dist = join(site, "dist");
 
 /** every path this script writes, so a collision fails loudly instead of silently */
 const written = new Set();
+
+/**
+ * The generated files staged into public/.
+ *
+ * public/ otherwise holds HAND-AUTHORED files, and the two must never share a name.
+ * That is not hypothetical: an earlier version of this build emitted the component
+ * stylesheet as public/botui.css, which was also the page stylesheet's name. The
+ * build overwrote the source file, the site shipped with the component's rules at
+ * /botui.css, and the page rendered completely unstyled — with every other check
+ * green, because the file existed and the selector test had never been written.
+ *
+ * So the allowlist is the point, not the tidy naming: a generated file may only
+ * claim a name on this list, and anything else fails the build.
+ */
+const GENERATED = new Set(["botui-engine.js", "botui-engine.js.map", "botui-dot-matrix.css"]);
+
 async function emit(from, to) {
   if (written.has(to)) {
     throw new Error(
@@ -25,9 +41,29 @@ async function emit(from, to) {
         `      nothing else here would catch. Give them distinct names.`,
     );
   }
+  const inPublic = to.startsWith(`${publicDir}/`);
+  const name = inPublic ? to.slice(publicDir.length + 1) : null;
+  if (inPublic && !GENERATED.has(name)) {
+    throw new Error(
+      `site: refusing to write a GENERATED file over hand-authored source — ${name}.\n` +
+        `      Generated files staged into public/ must be listed in GENERATED in\n` +
+        `      scripts/build-site.mjs. (An earlier build overwrote the page stylesheet\n` +
+        `      this way and shipped an unstyled site.)`,
+    );
+  }
   written.add(to);
   await mkdir(dirname(to), { recursive: true });
   await copyFile(from, to);
+}
+
+/** stage a text artefact through the same allowlist as emit() */
+async function stageText(to, text) {
+  const name = to.slice(publicDir.length + 1);
+  if (!GENERATED.has(name)) {
+    throw new Error(`site: ${name} is not in GENERATED — refusing to stage it over source`);
+  }
+  written.add(to);
+  await writeFile(to, text, "utf8");
 }
 
 await rm(dist, { recursive: true, force: true });
@@ -46,10 +82,15 @@ const engineSource = (await readFile(engine, "utf8")).replace(
   /\/\/# sourceMappingURL=\S+/,
   "//# sourceMappingURL=botui-engine.js.map",
 );
-written.add(join(publicDir, "botui-engine.js"));
-await writeFile(join(publicDir, "botui-engine.js"), engineSource, "utf8");
+await stageText(join(publicDir, "botui-engine.js"), engineSource);
 await emit(join(root, "packages/core/dist/index.js.map"), join(publicDir, "botui-engine.js.map"));
-await emit(join(root, "packages/core/dist/botui-dot-matrix.css"), join(publicDir, "botui.css"));
+// the COMPONENT stylesheet, under its own name. It is not the page stylesheet, and
+// the demo's CSS-renderer toggle needs it: the runtime injects the @keyframes, but
+// the .botui-dot-matrix layout rules live in this file.
+await emit(
+  join(root, "packages/core/dist/botui-dot-matrix.css"),
+  join(publicDir, "botui-dot-matrix.css"),
+);
 await emit(join(site, "index.html"), join(dist, "index.html"));
 
 const copyTree = async (from, to) => {

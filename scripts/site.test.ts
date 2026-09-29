@@ -90,6 +90,64 @@ describe("the site", () => {
     }
   });
 
+  it("the page's own stylesheet styles the PAGE, not the component", async () => {
+    // The shipped bug: the build emitted the component stylesheet as botui.css, which
+    // was also the page stylesheet's name, and overwrote the source. The site then
+    // served the component's rules at /botui.css and rendered entirely unstyled.
+    // Every other check passed, because the file existed and nothing had asserted
+    // what was IN it.
+    const css = await readFile(join(sitePublic, "site.css"), "utf8");
+    for (const selector of [
+      ":root",
+      ".top",
+      ".lede",
+      ".install",
+      ".cards",
+      ".stage",
+      ".readout",
+      "footer",
+    ]) {
+      expect(css, `site.css is missing ${selector} — is it the component's stylesheet?`).toContain(
+        selector,
+      );
+    }
+    // and the tokens the demo and the page both read
+    expect(css).toContain("--ink");
+    // the component stylesheet is a DIFFERENT file, with the component's rules
+    const component = await readFile(join(sitePublic, "botui-dot-matrix.css"), "utf8");
+    expect(component).toContain(".botui-dot-matrix");
+    expect(component, "the two stylesheets are the same file").not.toBe(css);
+    expect(component).not.toContain(".lede");
+  });
+
+  it("every stylesheet the page links is distinct on disk", async () => {
+    // two <link>s pointing at one file is the same failure wearing a different hat
+    const html = await readFile(join(site, "index.html"), "utf8");
+    const hrefs = [...html.matchAll(/<link[^>]+rel="stylesheet"[^>]+href="([^"]+)"/g)].map(
+      (m) => m[1]!,
+    );
+    expect(hrefs.length).toBeGreaterThan(1);
+    expect(new Set(hrefs).size, "the page links the same stylesheet twice").toBe(hrefs.length);
+  });
+
+  it("no generated file shares a name with a hand-authored one", async () => {
+    // GENERATED is the allowlist; anything in public/ that is not on it and not
+    // hand-authored would be a build waiting to overwrite the source
+    const source = await readFile(join(root, "scripts", "build-site.mjs"), "utf8");
+    const listed = new Set(
+      [...source.matchAll(/GENERATED = new Set\(\[([^\]]*)\]/gs)].flatMap((m) =>
+        [...(m[1] ?? "").matchAll(/"([^"]+)"/g)].map((x) => x[1]!),
+      ),
+    );
+    expect(listed.size).toBeGreaterThan(0);
+    for (const name of listed) {
+      expect(
+        source.includes(`"${name}"`),
+        `${name} is on the GENERATED list but nothing emits it`,
+      ).toBe(true);
+    }
+  });
+
   it("every file the page references is served", async () => {
     const html = await readFile(join(site, "index.html"), "utf8");
     const referenced = [

@@ -1,0 +1,287 @@
+/* BotUI site — page styles.
+ *
+ * NOT the component stylesheet. That one is generated (botui-dot-matrix.css) and
+ * arrives from packages/core/dist; this file styles the page around the demo. They
+ * are separate files on purpose, and build-site.mjs refuses to write a generated
+ * file over a hand-authored one — an earlier version of this build emitted the
+ * component CSS as botui.css, overwrote this file, and shipped a completely unstyled
+ * page that every check still passed.
+ */
+:root {
+  --ink: #16161a;
+  --muted: #6b6b76;
+  --line: #e4e4e9;
+  --bg: #fbfbfc;
+  --card: #ffffff;
+  --accent: #2f5bff;
+  --radius: 12px;
+  color-scheme: light dark;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ink: #f2f2f5;
+    --muted: #9a9aa6;
+    --line: #26262c;
+    --bg: #0b0b0c;
+    --card: #141416;
+    --accent: #7d9bff;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font:
+    15px/1.6 ui-sans-serif,
+    system-ui,
+    -apple-system,
+    "Segoe UI",
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.9em;
+}
+
+a {
+  color: var(--accent);
+  text-decoration: none;
+}
+
+a:hover {
+  text-decoration: underline;
+}
+
+.top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  max-width: 1040px;
+  margin: 0 auto;
+  padding: 20px 24px;
+  border-bottom: 1px solid var(--line);
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 650;
+  color: var(--ink);
+  letter-spacing: -0.01em;
+}
+
+.brand .mark {
+  width: 22px;
+  height: 22px;
+  display: block;
+  color: var(--ink);
+}
+
+.top nav {
+  display: flex;
+  gap: 20px;
+  font-size: 14px;
+}
+
+main {
+  max-width: 1040px;
+  margin: 0 auto;
+  padding: 0 24px 80px;
+}
+
+section {
+  padding: 56px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+section:last-of-type {
+  border-bottom: 0;
+}
+
+h1 {
+  font-size: clamp(30px, 5vw, 46px);
+  line-height: 1.1;
+  letter-spacing: -0.03em;
+  margin: 0 0 16px;
+  max-width: 18ch;
+}
+
+h2 {
+  font-size: 20px;
+  letter-spacing: -0.01em;
+  margin: 0 0 6px;
+}
+
+h3 {
+  font-size: 15px;
+  margin: 0 0 6px;
+}
+
+.lede {
+  font-size: 17px;
+  color: var(--muted);
+  max-width: 62ch;
+  margin: 0 0 28px;
+}
+
+.fine {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.install {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border: 1px solid var(--line);
+  background: var(--card);
+  border-radius: var(--radius);
+  padding: 14px 16px;
+  max-width: 520px;
+}
+
+.install code {
+  flex: 1;
+  overflow-x: auto;
+  white-space: nowrap;
+}
+
+.install button {
+  font: inherit;
+  font-size: 13px;
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--muted);
+  border-radius: 8px;
+  padding: 4px 10px;
+  cursor: pointer;
+}
+
+.install button:hover {
+  color: var(--ink);
+  border-color: var(--muted);
+}
+
+.cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 16px;
+  margin-top: 20px;
+}
+
+.cards article,
+.cards .card {
+  border: 1px solid var(--line);
+  background: var(--card);
+  border-radius: var(--radius);
+  padding: 18px;
+}
+
+.cards p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.cards .card .name {
+  font-weight: 650;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.cards .card .preview {
+  height: 96px;
+  display: grid;
+  place-items: center;
+  margin: 4px 0 12px;
+  color: var(--ink);
+}
+
+.stage {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 260px;
+  gap: 24px;
+  align-items: start;
+  margin-top: 20px;
+}
+
+.stage-canvas {
+  display: grid;
+  place-items: center;
+  min-height: 260px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--card);
+  /* the field is sized in px by the component, so the pane must not stretch it */
+  overflow: hidden;
+}
+
+.stage-controls {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 6px;
+  font-size: 13px;
+}
+
+.stage-controls label {
+  color: var(--muted);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-top: 8px;
+}
+
+.stage-controls output {
+  color: var(--ink);
+  font-family: ui-monospace, monospace;
+  float: right;
+}
+
+.stage-controls select,
+.stage-controls input[type="range"] {
+  width: 100%;
+  font: inherit;
+  color: var(--ink);
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 6px 8px;
+}
+
+.stage-controls .check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  text-transform: none;
+  letter-spacing: 0;
+  font-size: 13px;
+  color: var(--ink);
+  margin-top: 14px;
+}
+
+.readout {
+  margin-top: 16px;
+  font-family: ui-monospace, monospace;
+  font-size: 12px;
+  color: var(--muted);
+  white-space: pre-wrap;
+}
+
+footer {
+  border-top: 1px solid var(--line);
+  padding: 28px 24px 60px;
+  text-align: center;
+  color: var(--muted);
+  font-size: 13px;
+}

@@ -22,5 +22,15 @@ All notable changes to BotUI are recorded here. The format follows
   `--force` and conflict reporting.
 - A docs site on `ui.botharness.ai` running the built engine, not a copy of it.
 
+### Fixed
+
+- The docs site shipped with **no page styles**. `build-site.mjs` emitted the component
+  stylesheet as `apps/site/public/botui.css`, which was also the page stylesheet's name, so
+  the build overwrote the source file and the site served the component's three rules in place
+  of the page's. Every check passed, because the file existed and nothing asserted what was in
+  it. The page stylesheet is now `site.css`, the component stylesheet ships as
+  `botui-dot-matrix.css`, and the build refuses to write a generated file over a hand-authored
+  one — with a test that reads the served CSS and fails if it is the wrong file.
+
 [Unreleased]: https://github.com/BotHarness/BotUI/compare/v0.1.0...HEAD
 [0.1.0]: https://github.com/BotHarness/BotUI/releases/tag/v0.1.0

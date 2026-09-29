@@ -42,6 +42,13 @@ Deploy the site with `wrangler deploy -c apps/site/wrangler.jsonc` (Worker `botu
 - **Preserve the size algebra.** `cell = size / ((n - 1)(1 + gap) + dotSize)` is solved, not clipped, which is what
   keeps the field landing exactly on the box at any `dotSize` — including above 1, where the dots touch. If you
   change it, the invariant tests in `packages/core/test/dot-matrix.test.ts` are the specification.
+- **`public/` holds hand-authored files; generated files are allowlisted.** `build-site.mjs` stages
+  the engine and the component stylesheet into `apps/site/public/` so the demo's relative import
+  works in three places, and it refuses to write any name not on its `GENERATED` list. This is not
+  tidiness: the build once emitted the component stylesheet as `botui.css`, which was also the page
+  stylesheet's name, overwrote the source, and shipped a completely unstyled site with every check
+  green. A test reads the served CSS and fails if the page's stylesheet contains the component's
+  rules — the check that was missing.
 - **Comments explain why, and cite the trap.** The strongest comments in this repo record a bug that was found
   the hard way (a seam discontinuity at `p = 0`, a blur that dissolved the crest, a quantised order that no
   envelope could smooth). Keep that density; do not add comments that restate the code.
