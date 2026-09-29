@@ -1,83 +1,12 @@
 ---
-import Base from '../layouts/Base.astro';
-import { InstallCommand } from '../components/InstallCommand';
-import { Playground } from '../components/Playground';
-import { RegistryList } from '../components/RegistryList';
+/**
+ * The default locale lives at the root.
+ *
+ * Astro requires a root index page once i18n is configured, and `prefixDefaultLocale:
+ * false` means this IS the English page rather than a redirect to one. The body is
+ * shared with /zh/ so the two languages cannot drift apart.
+ */
+import Home from '../components/Home.astro';
 ---
 
-<Base
-  title="BotUI — open-source UI components for agent products"
-  description="Copy-and-own UI components for agent products. Install with npx, then the code is yours. MIT licensed."
->
-  <header class="top">
-    <a class="brand" href="/"><span>BotUI</span></a>
-    <nav>
-      <a href="#install">Install</a>
-      <a href="#components">Components</a>
-      <a href="https://github.com/BotHarness/BotUI" rel="noreferrer">GitHub</a>
-    </nav>
-  </header>
-
-  <main>
-    <section class="hero">
-      <h1>UI components for things that think.</h1>
-      <p class="lede">
-        Loading states, streaming indicators, agent status — the surfaces an agent
-        product lives on. Install one with <code>npx</code>, and the code lands in
-        your repo. No runtime dependency, nothing to keep current. Read it, change it,
-        delete the name.
-      </p>
-      <InstallCommand command="npx @botharness/botui add dot-matrix" client:load />
-      <p class="fine">
-        Also works with shadcn, against the same registry:
-        <code>npx shadcn@latest add https://ui.botharness.ai/r/dot-matrix.json</code>
-      </p>
-    </section>
-
-    <!-- the playground sits directly under the install command on purpose: the point of
-         the page is to let you drag the thing you are about to install, so putting a
-         component index between the two would be a detour. `client:load` rather than
-         `client:visible` for the same reason — it must be interactive on arrival. -->
-    <section id="playground" class="playground-section">
-      <Playground client:load />
-    </section>
-
-    <section id="components">
-      <h2>Components</h2>
-      <p class="fine">Read from <code>/registry.json</code> — the same document the CLI installs from.</p>
-      <RegistryList client:visible />
-    </section>
-
-    <section>
-      <h2>Why copy-and-own</h2>
-      <div class="prose-grid">
-        <article>
-          <h3>Yours after install</h3>
-          <p>
-            The registry ships the real source files. What lands in
-            <code>components/botui/</code> is the same text as the repository, and a
-            test in CI proves it byte for byte.
-          </p>
-        </article>
-        <article>
-          <h3>No version to track</h3>
-          <p>
-            There is no runtime dependency to upgrade and nothing that can break under
-            you. When BotUI ships something better, you take the diff when you want to.
-          </p>
-        </article>
-        <article>
-          <h3>One component, five layers</h3>
-          <p>
-            Lattice, traversal, brightness envelope, dot polygon, renderer. Each is a
-            table you can extend without touching the layers above.
-          </p>
-        </article>
-      </div>
-    </section>
-  </main>
-
-  <footer>
-    <p>MIT licensed · <a href="https://github.com/BotHarness/BotUI">BotHarness/BotUI</a></p>
-  </footer>
-</Base>
+<Home />

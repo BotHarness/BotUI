@@ -35,6 +35,14 @@ All notable changes to BotUI are recorded here. The format follows
   and assert the field changed. A slider that renders and does nothing is indistinguishable from one
   that works, in a screenshot and in a DOM dump.
 
+- **The site is bilingual.** English at `/` and Chinese at `/zh/`, from Paraglide message
+  catalogs under `apps/site/messages/`, with a real link between them, per-page `hreflang`, and a
+  `<html lang>` that matches the copy. The switch is a link to the other locale's file rather
+  than a client-side toggle, so `/zh/` is reachable with JavaScript off and crawlable.
+- `pnpm i18n` compiles the message catalogs. `apps/site/src/paraglide` is generated and
+  gitignored, so `typecheck` and `verify` now run this first: from a clean clone they used to
+  fail on imports that were not on disk yet.
+
 ### Fixed
 
 - **Three playground sliders were broken in the same way, and none of the tests could see

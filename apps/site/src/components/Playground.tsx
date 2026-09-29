@@ -17,6 +17,7 @@ import {
   type PresetName,
   type Silhouette,
 } from "@botharness/botui-core";
+import { m, glyphLabel, polygonName, silhouetteLabel, taskLabel } from "../i18n.js";
 import { Matrix } from "./Matrix";
 
 /**
@@ -91,27 +92,27 @@ export function Playground() {
       </div>
 
       <div className="playground-controls">
-        <Group label="shape · 形状">
+        <Group label={m.group_shape()}>
           <Slider
-            label="整体 silhouette"
+            label={m.ctl_silhouette()}
             value={silhouetteIndex}
             min={0}
             max={SILHOUETTE_KEYS.length - 1}
             step={1}
-            display={options.silhouette ?? "square"}
+            display={silhouetteLabel(options.silhouette ?? "square")}
             onChange={(i) => set({ silhouette: SILHOUETTE_KEYS[i] as Silhouette })}
           />
           <Slider
-            label="点 sides"
+            label={m.ctl_sides()}
             value={sides}
             min={3}
             max={10}
             step={1}
-            display={POLYGON_NAMES[sides] ?? `${sides}-gon`}
+            display={polygonName(sides)}
             onChange={(n) => setSpec({ sides: n })}
           />
           <Select
-            label="点预设 glyph"
+            label={m.ctl_glyph()}
             value={options.dot}
             onChange={(dot) =>
               set({
@@ -121,7 +122,7 @@ export function Playground() {
             }
             options={DOT_SHAPE_KEYS.map((key) => ({
               value: key,
-              label: DOT_SHAPES[key as keyof typeof DOT_SHAPES].label,
+              label: glyphLabel(key),
             }))}
           />
           {/* the top of this travel is the polygon's OWN inradius, so dragging it
@@ -129,14 +130,17 @@ export function Playground() {
               pentagon alike. A fixed 90% would be unreachable for some shapes and
               meaningless for others. */}
           <PercentSlider
-            label="圆角 radius"
+            label={m.ctl_radius()}
             fraction={options.spec?.radius ?? 0}
             max={Math.round(inradiusOf(sides) * 100)}
-            display={`${Math.round((options.spec?.radius ?? 0) * 100)}% of ${Math.round(inradiusOf(sides) * 100)}%`}
+            display={m.value_radius({
+              value: String(Math.round((options.spec?.radius ?? 0) * 100)),
+              max: String(Math.round(inradiusOf(sides) * 100)),
+            })}
             onChange={(radius) => setSpec({ radius })}
           />
           <PercentSlider
-            label="拉伸 aspect"
+            label={m.ctl_aspect()}
             fraction={options.spec?.aspect ?? 1}
             min={20}
             max={100}
@@ -145,9 +149,9 @@ export function Playground() {
           />
         </Group>
 
-        <Group label="size · 尺寸">
+        <Group label={m.group_size()}>
           <Slider
-            label="size"
+            label={m.ctl_size()}
             value={options.size ?? 150}
             min={24}
             max={260}
@@ -158,7 +162,7 @@ export function Playground() {
           {/* two sliders, not one encoding "7x7" in a range input: Number("7x7") is NaN,
                 so the combined control silently set both axes to NaN on the first drag */}
           <Slider
-            label="cols"
+            label={m.ctl_cols()}
             value={options.cols ?? 7}
             min={1}
             max={16}
@@ -167,7 +171,7 @@ export function Playground() {
             onChange={(cols) => set({ cols })}
           />
           <Slider
-            label="rows"
+            label={m.ctl_rows()}
             value={options.rows ?? 7}
             min={1}
             max={16}
@@ -176,7 +180,7 @@ export function Playground() {
             onChange={(rows) => set({ rows })}
           />
           <Slider
-            label="点占格 dot / cell"
+            label={m.ctl_dot_cell()}
             value={Math.round((options.dotSize ?? 0.55) * 100)}
             min={5}
             max={200}
@@ -185,7 +189,7 @@ export function Playground() {
             onChange={(v) => set({ dotSize: v / 100 })}
           />
           <Slider
-            label="列 gap x"
+            label={m.ctl_gap_x()}
             value={Math.round((options.gapX ?? 0) * 100)}
             min={0}
             max={200}
@@ -194,7 +198,7 @@ export function Playground() {
             onChange={(v) => set({ gapX: v / 100 })}
           />
           <Slider
-            label="行 gap y"
+            label={m.ctl_gap_y()}
             value={Math.round((options.gapY ?? 0) * 100)}
             min={0}
             max={200}
@@ -204,20 +208,20 @@ export function Playground() {
           />
         </Group>
 
-        <Group label="motion · 动效">
+        <Group label={m.group_motion()}>
           <Select
-            label="preset"
+            label={m.ctl_preset()}
             value={options.preset}
-            hint={PRESETS[options.preset ?? "spiral"]?.task}
+            hint={taskLabel(options.preset ?? "spiral")}
             onChange={(preset) => set({ preset: preset as PresetName })}
             options={PRESET_KEYS.map((key) => ({ value: key, label: key }))}
           />
           <PercentSlider
-            label="速度 speed"
+            label={m.ctl_speed()}
             fraction={options.speed ?? 1}
             min={5}
             max={300}
-            display={`${(options.speed ?? 1).toFixed(2)}×`}
+            display={m.value_speed({ value: (options.speed ?? 1).toFixed(2) })}
             onChange={(speed) => set({ speed })}
           />
           {/* The label states the preset's OWN number rather than the word "preset":
@@ -226,16 +230,24 @@ export function Playground() {
               back to following the preset — a dial you can leave but not return to is
               a trap, and switching the preset no longer moves this one. */}
           <PercentSlider
-            label="错峰 stagger"
+            label={m.ctl_stagger()}
             fraction={options.stagger ?? PRESETS[options.preset ?? "spiral"]!.spread}
             max={200}
-            display={`${options.stagger == null ? "预设 " : ""}${percentOf(options.stagger ?? PRESETS[options.preset ?? "spiral"]!.spread)}`}
+            display={
+              options.stagger == null
+                ? m.value_preset({
+                    value: percentOf(
+                      options.stagger ?? PRESETS[options.preset ?? "spiral"]!.spread,
+                    ),
+                  })
+                : percentOf(options.stagger)
+            }
             dirty={options.stagger != null}
             onReset={() => set({ stagger: null })}
             onChange={(stagger) => set({ stagger })}
           />
           <Slider
-            label="波宽 softness"
+            label={m.ctl_softness()}
             value={Math.round((options.softness ?? 0) * 100)}
             min={0}
             max={100}
@@ -244,7 +256,7 @@ export function Playground() {
             onChange={(v) => set({ softness: v / 100 })}
           />
           <Slider
-            label="呼吸 grow"
+            label={m.ctl_grow()}
             value={Math.round((options.grow ?? 0.5) * 100)}
             min={0}
             max={100}
@@ -253,7 +265,7 @@ export function Playground() {
             onChange={(v) => set({ grow: v / 100 })}
           />
           <Slider
-            label="底噪 floor"
+            label={m.ctl_floor()}
             value={Math.round((options.floor ?? 0.16) * 100)}
             min={0}
             max={100}
@@ -270,41 +282,25 @@ export function Playground() {
             disabled={!cssAvailable}
             onChange={(e) => setCssRenderer(e.target.checked)}
           />
-          CSS renderer <span>0 JS per frame</span>
+          {m.css_renderer()} <span>{m.css_renderer_note()}</span>
         </label>
-        {!cssAvailable && (
-          <p className="playground-note">
-            This motion is a highlight <em>moving</em> down the field, and a per-dot delay can only
-            offset a phase — so the CSS renderer refuses it rather than showing something else.
-          </p>
-        )}
+        {!cssAvailable && <p className="playground-note">{m.css_refused()}</p>}
       </div>
 
       <pre className="playground-readout">
         {[
-          `dot / cell   ${Math.round((options.dotSize ?? 0) * 100)}%`,
-          `dot / pitch  ${Math.round(pitchShare * 100)}%    100% = two dots touching`,
-          `touching at  dot / cell = ${touching.toFixed(2)}`,
-          `pitch        ${geometry.pitchX.toFixed(1)} × ${geometry.pitchY.toFixed(1)} px`,
-          `dot          ${geometry.dotPx.toFixed(1)} px`,
-          `silhouette   ${options.silhouette}   dot ${POLYGON_NAMES[sides] ?? `${sides}-gon`}`,
-          `renderer     ${cssRenderer ? "css" : "svg"}   speed ${(options.speed ?? 1).toFixed(2)}×`,
+          `${m.readout_dot_cell()}   ${Math.round((options.dotSize ?? 0) * 100)}%`,
+          `${m.readout_dot_pitch()}  ${Math.round(pitchShare * 100)}%    ${m.readout_touching_hint()}`,
+          `${m.readout_touching()}  ${m.readout_touching_value({ value: touching.toFixed(2) })}`,
+          `${m.readout_pitch()}        ${geometry.pitchX.toFixed(1)} × ${geometry.pitchY.toFixed(1)} px`,
+          `${m.readout_dot()}          ${geometry.dotPx.toFixed(1)} px`,
+          `${m.readout_silhouette()}   ${silhouetteLabel(options.silhouette ?? "square")}   dot ${polygonName(sides)}`,
+          `${m.readout_renderer()}     ${cssRenderer ? "css" : "svg"}   ${m.readout_speed()} ${m.value_speed({ value: (options.speed ?? 1).toFixed(2) })}`,
         ].join("\n")}
       </pre>
     </div>
   );
 }
-
-const POLYGON_NAMES: Record<number, string> = {
-  3: "triangle 三角",
-  4: "square 方",
-  5: "pentagon 五边",
-  6: "hexagon 六边",
-  7: "heptagon 七边",
-  8: "octagon 八边",
-  9: "nonagon 九边",
-  10: "decagon 十边",
-};
 
 const percent = (v: number) => percentOf(v);
 const percentOf = (v: number) => `${Math.round(v * 100)}%`;
@@ -431,8 +427,8 @@ function Slider({
             <button
               type="button"
               className="reset"
-              title="回到预设值"
-              aria-label={`${label} — 回到预设值`}
+              title={m.ctl_reset()}
+              aria-label={m.ctl_reset_aria({ label })}
               onClick={onReset}
             >
               {dirty ? "\u21ba" : "\u00b7"}

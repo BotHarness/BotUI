@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { m } from "../i18n.js";
 
 /**
  * The install command, with a copy button.
@@ -9,6 +10,12 @@ import { useState } from "react";
  */
 export function InstallCommand({ command }: { command: string }) {
   const [state, setState] = useState<"idle" | "copied" | "manual">("idle");
+  const label =
+    state === "copied"
+      ? m.install_copied()
+      : state === "manual"
+        ? m.install_manual()
+        : m.install_copy();
 
   return (
     <div className="install">
@@ -25,7 +32,7 @@ export function InstallCommand({ command }: { command: string }) {
           setTimeout(() => setState("idle"), 1800);
         }}
       >
-        {state === "copied" ? "copied" : state === "manual" ? "select it" : "copy"}
+        {label}
       </button>
     </div>
   );

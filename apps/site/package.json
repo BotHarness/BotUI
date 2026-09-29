@@ -10,11 +10,13 @@
     "preview": "astro preview",
     "check": "astro check",
     "deploy": "wrangler pages deploy dist --project-name botui-site",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "i18n:compile": "paraglide-js compile --project ./project.inlang --outdir ./src/paraglide"
   },
   "dependencies": {
     "@astrojs/react": "^7.0.0",
     "@botharness/botui-core": "workspace:*",
+    "@inlang/paraglide-js": "^2.25.4",
     "astro": "^7.3.5",
     "react": "^19.3.0",
     "react-dom": "^19.3.0"

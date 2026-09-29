@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { PRESETS, type PresetName } from "@botharness/botui-core";
-import { Matrix } from "./Matrix";
+import { m } from "../i18n.js";
+import { Matrix } from "./Matrix.js";
 
 interface RegistryItem {
   name: string;
@@ -55,14 +56,9 @@ export function RegistryList() {
   }, []);
 
   if (error) {
-    return (
-      <p className="registry-error">
-        Could not read <code>/registry.json</code> — {error}. The registry is served from this site,
-        so this is the site being broken rather than the component.
-      </p>
-    );
+    return <p className="registry-error">{m.components_error({ reason: error })}</p>;
   }
-  if (!registry) return <p className="registry-loading">Loading the registry…</p>;
+  if (!registry) return <p className="registry-loading">{m.components_loading()}</p>;
 
   return (
     <div className="registry-grid">
@@ -81,7 +77,7 @@ export function RegistryList() {
             />
           </div>
           <h3>{item.title ?? item.name}</h3>
-          <code className="registry-install">npx @botharness/botui add {item.name}</code>
+          <code className="registry-install">{m.components_install({ name: item.name })}</code>
           <p>{item.description}</p>
         </article>
       ))}

@@ -1,0 +1,20 @@
+---
+import { baseLocale, locales } from '../../paraglide/runtime.js';
+import Home from '../../components/Home.astro';
+
+/**
+ * Every locale that is NOT the default.
+ *
+ * The default locale is served from `src/pages/index.astro` at `/`, so including it
+ * here would write the same page to two paths and make `/` and `/en/` two files
+ * that could drift. `getStaticPaths` is what turns the list into real files: SSG has
+ * no request to vary on, so each locale has to be its own document.
+ */
+export function getStaticPaths() {
+  return locales
+    .filter((locale) => locale !== baseLocale)
+    .map((locale) => ({ params: { locale } }));
+}
+---
+
+<Home />

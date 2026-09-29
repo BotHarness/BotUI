@@ -8,19 +8,22 @@ import '../styles/site.css';
 interface Props {
   title: string;
   description: string;
+  /** the language actually rendered, so `lang` is never a lie to a screen reader */
+  locale: string;
 }
 
-const { title, description } = Astro.props;
+const { title, description, locale } = Astro.props;
 ---
 
 <!doctype html>
-<html lang="en">
+<html lang={locale}>
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>{title}</title>
     <meta name="description" content={description} />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <slot name="head" />
   </head>
   <body>
     <slot />
