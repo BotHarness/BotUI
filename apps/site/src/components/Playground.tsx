@@ -220,11 +220,18 @@ export function Playground() {
             display={`${(options.speed ?? 1).toFixed(2)}×`}
             onChange={(speed) => set({ speed })}
           />
+          {/* The label states the preset's OWN number rather than the word "preset":
+              the thumb is sitting at 95% and a label reading only "preset" tells you
+              nothing about where it is. And once you drag, `onReset` is the only way
+              back to following the preset — a dial you can leave but not return to is
+              a trap, and switching the preset no longer moves this one. */}
           <PercentSlider
             label="错峰 stagger"
             fraction={options.stagger ?? PRESETS[options.preset ?? "spiral"]!.spread}
             max={200}
-            display={options.stagger == null ? "预设" : `${(options.stagger * 100).toFixed(0)}%`}
+            display={`${options.stagger == null ? "预设 " : ""}${percentOf(options.stagger ?? PRESETS[options.preset ?? "spiral"]!.spread)}`}
+            dirty={options.stagger != null}
+            onReset={() => set({ stagger: null })}
             onChange={(stagger) => set({ stagger })}
           />
           <Slider
@@ -299,7 +306,8 @@ const POLYGON_NAMES: Record<number, string> = {
   10: "decagon 十边",
 };
 
-const percent = (v: number) => `${Math.round(v * 100)}%`;
+const percent = (v: number) => percentOf(v);
+const percentOf = (v: number) => `${Math.round(v * 100)}%`;
 
 function Group({ label, children }: { label: string; children: React.ReactNode }) {
   return (
@@ -357,6 +365,8 @@ function PercentSlider({
   max = 100,
   step = 1,
   display,
+  dirty,
+  onReset,
   onChange,
 }: {
   label: string;
@@ -365,6 +375,8 @@ function PercentSlider({
   max?: number;
   step?: number;
   display?: string;
+  dirty?: boolean;
+  onReset?: () => void;
   onChange: (fraction: number) => void;
 }) {
   return (
@@ -375,6 +387,8 @@ function PercentSlider({
       max={max}
       step={step}
       display={display ?? percent(fraction)}
+      dirty={dirty}
+      onReset={onReset}
       onChange={(v) => onChange(v / 100)}
     />
   );
@@ -392,6 +406,8 @@ function Slider({
   max,
   step,
   display,
+  dirty,
+  onReset,
   onChange,
 }: {
   label: string;
@@ -400,13 +416,29 @@ function Slider({
   max: number;
   step: number;
   display: string;
+  /** the value is an override rather than the component/preset default */
+  dirty?: boolean;
+  onReset?: () => void;
   onChange: (value: number) => void;
 }) {
   return (
     <label className="playground-field">
       <span>
         {label}
-        <em>{display}</em>
+        <em>
+          {display}
+          {onReset && (
+            <button
+              type="button"
+              className="reset"
+              title="回到预设值"
+              aria-label={`${label} — 回到预设值`}
+              onClick={onReset}
+            >
+              {dirty ? "\u21ba" : "\u00b7"}
+            </button>
+          )}
+        </em>
       </span>
       <input
         type="range"

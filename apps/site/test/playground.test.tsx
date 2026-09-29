@@ -227,10 +227,14 @@ describe("every slider represents the value it shows", () => {
    * range is a slider lying about where it is.
    */
   const thumbFor = (shown: string): number | null => {
-    const trimmed = shown.trim();
-    const percent = /^(-?\d+(?:\.\d+)?)%/.exec(trimmed);
+    // a percent ANYWHERE in the label, not only at the start: a label that leads with
+    // "preset 95%" is the same kind of truth as "55%", and anchoring the match to the
+    // start meant the one slider whose default comes from a preset was the one slider
+    // the audit skipped
+    const percent = /(-?\d+(?:\.\d+)?)\s*%/.exec(shown);
     if (percent) return Math.round(Number(percent[1]));
-    const times = /^(-?\d+(?:\.\d+)?)×/.exec(trimmed);
+    // a `×` label is the raw option as a decimal, so 1.00× is thumb 100
+    const times = /(-?\d+(?:\.\d+)?)\s*×/.exec(shown);
     if (times) return Math.round(Number(times[1]) * 100);
     return null;
   };
@@ -353,5 +357,63 @@ describe("every slider represents the value it shows", () => {
     expect(Number(input.value)).toBe(100);
     drag(input, 300);
     expect(readout()).toContain("speed 3.00×");
+  });
+});
+
+describe("a dial that follows a preset must be able to return to it", () => {
+  /**
+   * The stagger dial is the one control whose default is not a constant — it is the
+   * preset's own spread — and that made it a one-way door. Once dragged, `stagger` is a
+   * number forever: the label stops saying "preset", switching the preset no longer moves
+   * the dial, and nothing on screen offers the way back.
+   *
+   * It also produced the only label the audit had been skipping, because the word
+   * "preset" carries no digit while the thumb sat at 95.
+   */
+  const staggerRow = () =>
+    [...container.querySelectorAll(".playground-field")].find((row) =>
+      /stagger/i.test(row.querySelector("span")?.textContent ?? ""),
+    )!;
+
+  it("the label states the preset’s own number, so it can never disagree with the thumb", () => {
+    const row = staggerRow();
+    const shown = row.querySelector("em")?.textContent ?? "";
+    const input = row.querySelector("input") as HTMLInputElement;
+    // spiral's spread is 0.95, and the label has to say so
+    expect(shown).toMatch(/95%/);
+    expect(Number(input.value)).toBe(95);
+  });
+
+  it("following the preset is reversible", () => {
+    const row = staggerRow();
+    const input = row.querySelector("input") as HTMLInputElement;
+    const reset = row.querySelector(".reset") as HTMLButtonElement;
+    expect(reset, "there must be a way back to the preset").toBeTruthy();
+
+    drag(input, 20);
+    expect(staggerRow().querySelector("em")?.textContent).toMatch(/^20%/);
+    expect(staggerRow().querySelector(".reset")?.textContent).toBe("↺");
+
+    act(() => reset.click());
+    expect(staggerRow().querySelector("em")?.textContent).toMatch(/预设 95%/);
+    expect(staggerRow().querySelector(".reset")?.textContent).toBe("·");
+    expect(Number((staggerRow().querySelector("input") as HTMLInputElement).value)).toBe(95);
+  });
+
+  it("changing the preset moves the dial again once it is back to following", () => {
+    const preset = [...container.querySelectorAll(".playground-field")]
+      .find((row) => /^preset/i.test(row.querySelector("span")?.textContent ?? ""))
+      ?.querySelector("select") as HTMLSelectElement;
+
+    // override, switch preset — the dial must NOT follow, because it is overridden
+    drag(staggerRow().querySelector("input") as HTMLInputElement, 20);
+    choose(preset, "ring");
+    expect(Number((staggerRow().querySelector("input") as HTMLInputElement).value)).toBe(20);
+
+    // back to following, and now the preset does move it: ring's spread is 0.34
+    act(() => (staggerRow().querySelector(".reset") as HTMLButtonElement).click());
+    choose(preset, "ring");
+    expect(Number((staggerRow().querySelector("input") as HTMLInputElement).value)).toBe(34);
+    expect(staggerRow().querySelector("em")?.textContent).toMatch(/34%/);
   });
 });

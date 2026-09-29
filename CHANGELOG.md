@@ -50,6 +50,18 @@ All notable changes to BotUI are recorded here. The format follows
   number printed beside it, and its requested value against its declared range. Both were
   verified by reintroducing the defect.
 
+### Fixed
+
+- **The stagger dial was a one-way door.** Its default is the _preset's_ spread, so once
+  dragged, `stagger` was a number forever: the label stopped saying "preset", switching the
+  preset no longer moved the dial, and nothing on screen offered a way back. It now shows the
+  preset's own number (`preset 95%`, so the label can never disagree with the thumb) and has a
+  reset control that appears only when the value is an override.
+- The slider audit now looks for a percentage _anywhere_ in a label rather than only at the
+  start. Anchoring the match to the start meant the one slider whose default comes from a preset
+  was the one slider the audit skipped — which is how a label reading only "preset" survived
+  while its thumb sat at 95.
+
 ## [0.1.0] — 2026-09-30
 
 ### Added

@@ -498,3 +498,19 @@ footer {
   letter-spacing: 0.1em;
   padding: 0 6px 0 0;
 }
+
+/* the reset affordance: a dot when the value IS the default, an arrow when it is not.
+   Clicking it returns to the preset, which is otherwise a one-way door. */
+.playground-field .reset {
+  border: 0;
+  background: none;
+  color: var(--muted);
+  cursor: pointer;
+  font: inherit;
+  line-height: 1;
+  padding: 0 0 0 4px;
+}
+
+.playground-field .reset:hover {
+  color: var(--ink);
+}
