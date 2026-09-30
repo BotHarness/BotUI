@@ -167,6 +167,57 @@ h3 {
   cursor: pointer;
 }
 
+/* The carried-away settings. Same visual language as .install so the two read as one
+   idea at two sizes — a command to run, and the component that follows from it. */
+.showcase-copy {
+  border: 1px solid var(--line);
+  background: var(--card);
+  border-radius: var(--radius);
+  margin-top: 14px;
+}
+
+.showcase-copy-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+}
+
+.showcase-copy-head p {
+  flex: 1;
+  margin: 0;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.showcase-copy button {
+  font: inherit;
+  font-size: 13px;
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--muted);
+  border-radius: 8px;
+  padding: 4px 10px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.showcase-copy-body {
+  margin: 0;
+  padding: 12px 14px;
+  border-top: 1px solid var(--line);
+  font-size: 12px;
+  line-height: 1.6;
+  overflow-x: auto;
+  white-space: pre;
+}
+
+/* Collapsed by default: the snippet is long, and the page is about the field. When a
+   clipboard write is refused the body becomes the thing to select, so it shows then. */
+.showcase-copy-body[aria-hidden="true"] {
+  display: none;
+}
+
 .install button:hover {
   color: var(--ink);
   border-color: var(--muted);

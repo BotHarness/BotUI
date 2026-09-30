@@ -104,5 +104,11 @@
   "scope_dot_shape": "改变每一个点本身",
   "scope_motion": "悬停或聚焦卡片即可播放",
   "group_timing": "节奏",
-  "group_envelope": "包络"
+  "group_envelope": "包络",
+  "showcase_copy": "按此配置复制",
+  "showcase_copied": "已复制",
+  "showcase_manual": "请手动选中",
+  "showcase_intro": "把这个加载指示器用到当前项目。",
+  "showcase_style": "import \"@botharness/botui-core/style.css\";",
+  "showcase_note": "你调过的参数，只多不少。"
 }

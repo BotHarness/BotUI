@@ -104,5 +104,11 @@
   "scope_dot_shape": "Changes each individual dot",
   "scope_motion": "Hover or focus a card to play it",
   "group_timing": "Timing",
-  "group_envelope": "Envelope"
+  "group_envelope": "Envelope",
+  "showcase_copy": "Copy with these settings",
+  "showcase_copied": "copied",
+  "showcase_manual": "select it",
+  "showcase_intro": "Add BotUI's loading indicator to this project.",
+  "showcase_style": "import \"@botharness/botui-core/style.css\";",
+  "showcase_note": "Your settings, as props — only what you changed."
 }

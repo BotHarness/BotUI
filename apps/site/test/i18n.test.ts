@@ -66,6 +66,9 @@ describe("the message catalogue", () => {
       "ctl_cols",
       "ctl_rows",
       "ctl_preset",
+      // a stylesheet import is code, not prose — it is the same bytes in both languages
+      // for the same reason `install_command` is: the copy has to paste and run
+      "showcase_style",
     ]);
     const en = await read("en");
     const zh = await read("zh");
@@ -86,6 +89,9 @@ describe("the message catalogue", () => {
       "components/Playground.tsx",
       "components/RegistryList.tsx",
       "components/InstallCommand.tsx",
+      // a NEW component must join this list, or its messages read as unrendered and the
+      // scan silently stops covering half the site
+      "components/ShowcaseCopy.tsx",
       "i18n.ts",
       "components/Home.astro",
       "layouts/Base.astro",

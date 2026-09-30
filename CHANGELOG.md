@@ -4,6 +4,8 @@
 
 ### Changed
 
+- **The playground can hand you its own settings.** A copy button next to the readout copies the install command, the `<DotMatrix>` element with the settings you arrived at already in it, and the stylesheet import — so the paste needs nothing else, and neither do you. It is a prompt rather than a component alone because a component with no way to install it is half an instruction. **Only the options you changed are emitted**, because a snippet carrying `fill={1} peak={1} floor={0.16}` on every copy says nothing about what you chose and goes stale when a default moves; touch nothing and you get `<DotMatrix />`, and the names are the real props — a snippet that looks right and does not compile is the same failure as a card redrawing its own dots. The description beside the motion is read out of the engine's own preset table, so it cannot drift from the card. Falls back to selectable text when the clipboard is refused, rather than a button that silently does nothing.
+
 - **The playground now opens on a hand-picked showcase state** rather than the engine's defaults: 5×5 with no gap at the largest size, `dot/cell` at 198% so the dots overlap into one surface, `grow` at 3% so a dot moves rather than pulses, `stagger` pinned at 70% so picking another motion does not move a slider under the visitor, square silhouette and square dots at radius 0. The engine's own defaults are untouched — that is the library's choice and the page is allowed to disagree — so the values live in a named `SHOWCASE` beside the component, each with the reason it was picked.
 
 - **The site is now Astro + React islands on Cloudflare Pages.** `apps/site` was a hand-written HTML page with a
