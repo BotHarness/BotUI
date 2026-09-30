@@ -141,8 +141,28 @@ export function buildSvg(options: DotMatrixOptions, t: number): SVGSVGElement {
   return svg;
 }
 
-/** push the resolved layout and motion onto a CSS host as custom properties */
-export function applyCssVars(host: HTMLElement, resolved: ResolvedField): void {
+/**
+ * Push the resolved layout and motion onto a CSS host as custom properties.
+ *
+ * Returns whether the host's EXISTING cells are the right ones. False means the lattice
+ * itself changed — different `cols`/`rows`, or a different `silhouette`, so the cells have
+ * to be built again — and the caller must rebuild rather than patch.
+ *
+ * The per-cell traversal `--botui-o` is re-ranked HERE, in place, and that is the whole
+ * reason this function touches the cells rather than only the host. A cell's phase offset
+ * is baked into its inline style when the host is built, so an option that changes the
+ * RANKING — `direction`, or anything that renumbers the traversal — reaches the CSS
+ * renderer only by rewriting that one property. `direction` was added and appeared to do
+ * nothing on the site's default renderer: the playground's state updated, the copied
+ * snippet said `direction={["counterClockwise"]}`, and the field ran the old way, because
+ * the host-level variables are a small fixed set and the traversal was not among them.
+ *
+ * Rewriting the property does NOT restart the animation — `animation-delay` is recomputed
+ * and the running effect re-phases — so a direction change shifts the wave rather than
+ * stuttering it. Replacing the DOM would restart every animation, which is why this is a
+ * patch and not a rebuild.
+ */
+export function applyCssVars(host: HTMLElement, resolved: ResolvedField): boolean {
   const { options: o, env, spread, glyph, layout: L } = resolved;
   // the SAME layout numbers the SVG renderer used — in px, from the explicit
   // `size`, never from a measurement
@@ -176,6 +196,33 @@ export function applyCssVars(host: HTMLElement, resolved: ResolvedField): void {
   host.style.setProperty("--botui-s", (1 + o.grow * 0.9).toFixed(3));
   host.style.color = o.color;
   host.dataset.timing = "linear";
+  return rankCells(host, resolved);
+}
+
+/**
+ * Re-rank the host's cells against the current traversal, in place.
+ *
+ * The cells are addressed by their own `grid-area`, so this also VERIFIES that the host
+ * still holds the cells these options call for. Rebuilding is reserved for the case where
+ * they are not: appending to a host whose cells belong to another lattice leaves a field
+ * that is the right size and the wrong dots, which is worse than either renderer.
+ */
+function rankCells(host: HTMLElement, resolved: ResolvedField): boolean {
+  const { options: o, order } = resolved;
+  const want = cellsFor(o.cols, o.rows, o.silhouette);
+  const cells = host.children;
+  if (cells.length !== want.length) return false;
+  for (let i = 0; i < want.length; i++) {
+    const c = want[i]!;
+    const el = cells[i] as HTMLElement;
+    // The cell's own address, not a read-back of `grid-area`. The shorthand round-trips
+    // through the CSS parser, and the `grid-row-start` longhands it would decompose into
+    // are not implemented everywhere jsdom is used — so deriving the address back out of
+    // the style made this sync check report "rebuild" on every update in a test DOM.
+    if (el.dataset.cell !== `${c.row},${c.col}`) return false;
+    el.style.setProperty("--botui-o", order(c.col, c.row, o.cols, o.rows, o.direction).toFixed(3));
+  }
+  return true;
 }
 
 /**
@@ -205,6 +252,9 @@ export function buildCss(options: DotMatrixOptions): HTMLElement | null {
     // corner instead of a ring. Naming the cell keeps the holes as holes, which is
     // what makes the CSS layout match the SVG one.
     dot.style.gridArea = `${c.row + 1} / ${c.col + 1}`;
+    // the cell's own address, so a later update can verify it still holds this cell and
+    // re-rank it in place rather than rebuilding the host
+    dot.dataset.cell = `${c.row},${c.col}`;
     // the raw 0…1 traversal position, kept for the reduced-motion static ramp
     dot.style.setProperty("--botui-o", order(c.col, c.row, o.cols, o.rows, o.direction).toFixed(3));
     host.appendChild(dot);
