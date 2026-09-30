@@ -369,23 +369,6 @@ footer {
   margin-top: 20px;
 }
 
-.playground-stage {
-  display: grid;
-  place-items: center;
-  min-height: 300px;
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-  background: var(--card);
-  /* the field is sized in px by the component; the pane must not stretch it */
-  overflow: hidden;
-  color: var(--ink);
-  /* The control column is far taller than the field, so on a wide screen the field
-     would sit stranded at the top with a column of empty space beside it. Sticky
-     keeps the thing you are adjusting in view while you drag the thing adjusting it. */
-  position: sticky;
-  top: 20px;
-}
-
 .playground-controls {
   display: flex;
   flex-direction: column;
@@ -395,7 +378,7 @@ footer {
 .playground-field {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 2px;
   font-size: 12px;
 }
 
@@ -425,7 +408,7 @@ footer {
   background: var(--card);
   border: 1px solid var(--line);
   border-radius: 8px;
-  padding: 5px 8px;
+  padding: 4px 8px;
 }
 
 .playground-check {
@@ -441,6 +424,12 @@ footer {
   font-size: 11px;
 }
 
+.playground-note:empty {
+  display: none;
+}
+
+/* the refusal note: shown only when the engine actually refuses a motion, so it
+   reserves no space when the renderer can express what is selected */
 .playground-note {
   color: var(--muted);
   font-size: 12px;
@@ -480,10 +469,10 @@ footer {
   border: 0;
   border-top: 1px solid var(--line);
   margin: 0;
-  padding: 12px 0 0;
+  padding: 9px 0 0;
   display: flex;
   flex-direction: column;
-  gap: 9px;
+  gap: 7px;
 }
 
 .playground-group:first-of-type {
@@ -529,7 +518,7 @@ footer {
 .playground-side {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 10px;
   min-width: 0;
 }
 
@@ -537,14 +526,47 @@ footer {
    dot size are what you reach for while looking at the field — how many dots, how fat
    — so they belong to the thing they change. `z-index` is load-bearing: the engine
    paints its SVG into this box, and an overlay without it sits UNDER the dots. */
-.playground-stage {
+/* Both columns are sticky, at the same offset, so they scroll as one. Sticky on the
+   stage alone left the sliders half a page below the fold: at a 900px viewport the
+   side column's `softness`, `grow` and `floor` sat at y≈1356, unreachable until you had
+   scrolled past two card groups — which is what "there is no way to adjust these" was.
+   A control you cannot see is a control you cannot find, and the whole page is about
+   adjusting things while looking at them. */
+.playground-stage,
+.playground-side {
   position: sticky;
-  top: 20px;
+  /* 8px, not 20px: the side column is 817px of content and a 20px offset left a
+     773px box, so `softness`, `grow` and `floor` — the three the report was about —
+     sat just below the fold again. Both columns share the offset so they scroll as
+     one; the columns are independent scrollers, not one pane. */
+  top: 8px;
+}
+
+/* A sticky element taller than its scrollport stops sticking — it scrolls with the page
+   from the top, which is the original bug. Capping the column at the viewport and
+   letting it scroll internally keeps every slider reachable however short the window
+   is. Only the side column needs this; the stage is bounded by its own content. */
+.playground-side {
+  max-height: calc(100vh - 16px);
+  overflow-y: auto;
+  padding-right: 4px;
+  /* the scrollbar was eating 20px of the column's width, which is 20px the sliders
+     did not get. `auto` lets the browser decide and most of them overlay it. */
+  scrollbar-width: thin;
+}
+
+.playground-stage {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--card);
+  /* the field is sized in px by the component; the pane must not stretch it */
+  overflow: hidden;
+  color: var(--ink);
   align-items: center;
   gap: 20px;
-  padding: 16px;
+  padding: 12px;
   min-height: 0;
 }
 
@@ -634,7 +656,7 @@ footer {
   border: 0;
   border-top: 1px solid var(--line);
   margin: 0;
-  padding: 12px 0 0;
+  padding: 9px 0 0;
   min-width: 0;
 }
 
@@ -654,7 +676,7 @@ footer {
 /* The scope line is the whole point of splitting shape into two groups: it says, in
    the same place on every group, whether the cards change the field or each dot. */
 .card-scope {
-  margin: 0 0 8px;
+  margin: 0 0 5px;
   font-size: 11px;
   color: var(--muted);
 }
@@ -662,15 +684,15 @@ footer {
 .card-grid {
   display: grid;
   grid-template-columns: repeat(var(--cards, 4), minmax(0, 1fr));
-  gap: 6px;
+  gap: 4px;
 }
 
 .card {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 2px;
-  padding: 6px 2px 4px;
+  gap: 1px;
+  padding: 4px 2px 3px;
   border: 1px solid var(--line);
   border-radius: 8px;
   background: var(--card);
@@ -706,8 +728,14 @@ footer {
   place-items: center;
   color: var(--ink);
   /* fixed, not intrinsic: a row of cards where the label wraps to two lines for one
-     value and one line for another leaves the pictures on different baselines */
-  height: 52px;
+     value and one line for another leaves the pictures on different baselines.
+     52 -> 40: the side column is 1520px of content in an 813px viewport, so every
+     pixel of card height is a pixel of scrolling somebody has to do to reach
+     `softness`. The BOX shrinks; the dot grid inside it does not — 3x3 was measured
+     at 5 distinct brightness levels for both spiral and snake against 11 at 5x5, so
+     shrinking the grid would make the two hardest presets to tell apart, well,
+     impossible. */
+  height: 40px;
 }
 
 .card-label {
@@ -721,7 +749,7 @@ footer {
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
-  min-height: 2.5em;
+  min-height: 1.3em;
 }
 
 .card[data-selected] .card-label {

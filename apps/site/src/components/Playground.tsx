@@ -104,6 +104,28 @@ export function Playground({ initial }: { initial?: Partial<DotMatrixOptions> })
             outline and the dot inside it. A single slider list called them both "shape"
             and left the reader to guess which was which. */}
         <CardGroup
+          label={m.group_motion()}
+          scope={m.scope_motion()}
+          value={options.preset ?? DEFAULTS.preset}
+          onChange={(preset) => set({ preset: preset as PresetName })}
+          options={PRESET_KEYS.map((key) => ({ value: key, label: taskLabel(key) }))}
+          columns={3}
+          renderPreview={(value) => (
+            <LiveCard
+              options={{
+                cols: 5,
+                rows: 5,
+                silhouette: "square",
+                dot: "circle",
+                size: 56,
+                preset: value as PresetName,
+              }}
+              size={56}
+            />
+          )}
+        />
+
+        <CardGroup
           label={m.group_shape()}
           scope={m.scope_field_shape()}
           value={options.silhouette ?? DEFAULTS.silhouette}
@@ -150,28 +172,6 @@ export function Playground({ initial }: { initial?: Partial<DotMatrixOptions> })
             only half-conveys it. These run the engine, and only once you reach them —
             twelve fields animating at once is a page that melts the laptop it is trying
             to sell a component for. */}
-        <CardGroup
-          label={m.group_motion()}
-          scope={m.scope_motion()}
-          value={options.preset ?? DEFAULTS.preset}
-          onChange={(preset) => set({ preset: preset as PresetName })}
-          options={PRESET_KEYS.map((key) => ({ value: key, label: taskLabel(key) }))}
-          columns={3}
-          renderPreview={(value) => (
-            <LiveCard
-              options={{
-                cols: 5,
-                rows: 5,
-                silhouette: "square",
-                dot: "circle",
-                size: 56,
-                preset: value as PresetName,
-              }}
-              size={56}
-            />
-          )}
-        />
-
         <Group label={m.group_timing()}>
           {/* speed and stagger stay sliders: both are continuous, and a still frame
               cannot show a rate at all — the label is the honest representation */}
@@ -203,6 +203,32 @@ export function Playground({ initial }: { initial?: Partial<DotMatrixOptions> })
             dirty={options.stagger != null}
             onReset={() => set({ stagger: null })}
             onChange={(stagger) => set({ stagger })}
+          />
+        </Group>
+
+        {/* The envelope, its breath and its floor, ahead of the geometric detail.
+            They change what a field FEELS like rather than how big it is, and they
+            were the three the page was reported as having "no way to adjust" — a 20px
+            overflow in an 813px viewport put them below the fold, under a side column
+            nobody could see the bottom of. */}
+        <Group label={m.group_envelope()}>
+          <PercentSlider
+            label={m.ctl_softness()}
+            fraction={options.softness ?? 0}
+            display={`${Math.round((options.softness ?? 0) * 100)}%`}
+            onChange={(v) => set({ softness: v / 100 })}
+          />
+          <PercentSlider
+            label={m.ctl_grow()}
+            fraction={options.grow ?? 0.5}
+            display={percent(options.grow ?? 0.5)}
+            onChange={(v) => set({ grow: v / 100 })}
+          />
+          <PercentSlider
+            label={m.ctl_floor()}
+            fraction={options.floor ?? 0.16}
+            display={percent(options.floor ?? 0.16)}
+            onChange={(v) => set({ floor: v / 100 })}
           />
         </Group>
 
@@ -239,24 +265,6 @@ export function Playground({ initial }: { initial?: Partial<DotMatrixOptions> })
             max={100}
             display={percent(options.spec?.aspect ?? 1)}
             onChange={(aspect) => setSpec({ aspect })}
-          />
-          <PercentSlider
-            label={m.ctl_softness()}
-            fraction={options.softness ?? 0}
-            display={`${Math.round((options.softness ?? 0) * 100)}%`}
-            onChange={(v) => set({ softness: v / 100 })}
-          />
-          <PercentSlider
-            label={m.ctl_grow()}
-            fraction={options.grow ?? 0.5}
-            display={percent(options.grow ?? 0.5)}
-            onChange={(v) => set({ grow: v / 100 })}
-          />
-          <PercentSlider
-            label={m.ctl_floor()}
-            fraction={options.floor ?? 0.16}
-            display={percent(options.floor ?? 0.16)}
-            onChange={(v) => set({ floor: v / 100 })}
           />
         </Group>
 

@@ -63,6 +63,8 @@ All notable changes to BotUI are recorded here. The format follows
 
 ### Fixed
 
+- **`softness`, `grow` and `floor` were on the page but could not be reached.** They sat below the fold of a side column holding 1001px of content in an 813px viewport, under a grid of picture cards, in a column with no visible bottom — "there is no way to adjust these" was a position bug, not a missing control. The side column is now sticky with its own scrollport, the picture cards moved beside the field they describe, and the three moved ahead of the geometric detail as their own group, because what a field _feels_ like is asked before how big it is. The readout moved below the playground: it is output, not input, and it was the cheapest 112px in the column.
+
 - **Three playground sliders were broken in the same way, and none of the tests could see
   it.** `radius`, `aspect` and `speed` passed the raw 0…1 option against a track measured in
   hundredths. Radius `0.7` on a `0…90` track put the thumb at 0.8% of the travel, which is why
