@@ -86,6 +86,44 @@ if (!existsSync(registryPath)) {
 
 const registry = JSON.parse(await readFile(registryPath, "utf8"));
 
+/* ---- the published packages ----
+ *
+ * These three are published to npm, and a package page is assembled from the
+ * manifest: `repository` is what links the package back to its source, and the
+ * README is the entire body of that page. A missing `repository` renders as a
+ * package with no visible source link, which is indistinguishable from a package
+ * nobody should trust — and nobody can file an issue at a repository the manifest
+ * does not name.
+ *
+ * `homepage` is checked for the same reason: the docs ARE the reference for an
+ * options-heavy component, and npmjs.com gives the field its own prominent slot.
+ */
+const REPO_URL = "https://github.com/BotHarness/BotUI";
+for (const dir of ["core", "react", "cli"]) {
+  const manifestPath = join(root, "packages", dir, "package.json");
+  if (!existsSync(manifestPath)) continue;
+  const m = JSON.parse(await readFile(manifestPath, "utf8"));
+  const where = m.name ?? `packages/${dir}`;
+
+  if (!m.repository?.url) {
+    fail(`${where}: no repository.url — the npm page will have no source link`);
+  } else if (!m.repository.url.includes("github.com/BotHarness/BotUI")) {
+    // A repository pointing somewhere other than this repo means the published
+    // source and the installed source have diverged.
+    fail(`${where}: repository.url points outside ${REPO_URL} (${m.repository.url})`);
+  } else if (m.repository.directory !== `packages/${dir}` && dir !== "cli") {
+    // The `directory` is what makes the link land on this package's subtree
+    // instead of the repo root. Worth one line so it cannot rot unnoticed.
+    warn(`${where}: repository.directory is ${m.repository.directory ?? "(unset)"}`);
+  }
+
+  if (!m.homepage) fail(`${where}: no homepage`);
+  if (!m.bugs?.url) fail(`${where}: no bugs.url`);
+  if (!existsSync(join(root, "packages", dir, "README.md"))) {
+    fail(`${where}: no README.md — the npm page would render with no content`);
+  }
+}
+
 /* ---- the root document ---- */
 if (registry.$schema !== "https://ui.shadcn.com/schema/registry.json") {
   fail(`root $schema should be shadcn's registry schema, got ${registry.$schema}`);

@@ -2,7 +2,27 @@
   "name": "@botharness/botui-react",
   "version": "0.1.0",
   "description": "React bindings for BotUI components",
+  "keywords": [
+    "agent-ui",
+    "animation",
+    "dot-matrix",
+    "indicator",
+    "loading",
+    "react",
+    "status",
+    "streaming"
+  ],
+  "homepage": "https://ui.botharness.ai",
+  "bugs": {
+    "url": "https://github.com/BotHarness/BotUI/issues",
+    "source": "https://github.com/BotHarness/BotUI/issues"
+  },
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/BotHarness/BotUI.git",
+    "directory": "packages/react"
+  },
   "files": [
     "dist"
   ],
