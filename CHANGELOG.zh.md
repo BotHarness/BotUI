@@ -4,6 +4,8 @@
 
 ### 变更
 
+- **Playground 现在开在一组手工挑的 showcase 参数上**，而不是引擎默认值：最大尺寸的 5×5、无间距、`dot/cell` 198% 让点连成一整块面、`grow` 3% 让点是"移动"而不是"脉动"、`stagger` 固定在 70% 以免换个动效就把访客正看着的滑杆挪走、剪影和点都是方形且圆角为 0。引擎自己的默认值没有动 —— 那是库的选择，页面被允许不同意 —— 所以这些值放在组件旁边一个具名的 `SHOWCASE` 里，每一项都写明为什么选它。
+
 - **站点改为 Astro + React islands，部署到 Cloudflare Pages。** `apps/site` 原先是一个手写 HTML + module script，
   由 Worker 静态资源托管；现在是 `output: 'static'` 的 Astro 7 + React 19.3 islands，由 Vite 构建，部署到
   `botui-site` Pages 项目。demo 直接挂载 `@botharness/botui-core`，而不是走已发布的 React wrapper —— 否则文档站

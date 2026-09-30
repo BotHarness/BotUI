@@ -24,12 +24,49 @@ import {
 
 const CARD = 44;
 
+/**
+ * The state the page opens on: a hand-picked look, not the engine's defaults.
+ *
+ * The engine's defaults are a library's choice and this page is allowed to disagree
+ * with them — what it is demonstrating is a component someone would actually ship,
+ * and shipped components are tuned. Every value here was picked to make one thing
+ * legible at a glance:
+ *
+ * · **5×5 and no gap, at the largest size.** A field you can see the shape of. At 7×7
+ *   with a 45% gap the dots are far enough apart that the motion reads as noise.
+ * · **dot/cell 198%.** Over the cell, so the dots OVERLAP. This is the single number
+ *   that makes it read as one surface rather than as separate pixels — and it is past
+ *   the touching point, which is why the readout's own `dot / pitch` line is the one
+ *   worth watching: 100% there means two dots touching.
+ * · **grow 3%.** Almost no breathing. `grow` is how far a dot changes size over the
+ *   cycle, and at 50% a small dot is a pulsing blob rather than a moving light.
+ * · **stagger 70%, pinned.** A wide spread, and pinned rather than following the
+ *   preset so the opening frame does not change under the visitor when they pick a
+ *   different motion.
+ * · **radius 0.** Square dots. The rounded corners are one control away, and a
+ *   rounded dot at 198% overlap hides the grid the size is there to show.
+ */
+const SHOWCASE: Partial<DotMatrixOptions> = {
+  size: 260,
+  cols: 5,
+  rows: 5,
+  fill: 1,
+  silhouette: "square",
+  dot: "square",
+  dotSize: 1.98,
+  gapX: 0,
+  gapY: 0,
+  preset: "spiral",
+  stagger: 0.7,
+  softness: 0,
+  grow: 0.03,
+  floor: 0.16,
+  speed: 1,
+  spec: { ...GLYPH_DEFAULTS },
+};
+
 export function Playground({ initial }: { initial?: Partial<DotMatrixOptions> }) {
-  // The page opens at a denser dot/cell than the engine's default: at 55% a field
-  // reads as scattered pixels, and this page's subject is what a dot IS. The engine's
-  // own default is untouched — that is the library's choice, and the playground is
-  // allowed to disagree with it.
-  const [options, setOptions] = useState<DotMatrixOptions>({ dotSize: 0.78, ...initial });
+  const [options, setOptions] = useState<DotMatrixOptions>({ ...SHOWCASE, ...initial });
   // CSS by default, because it is the cheaper renderer and this is the one a product
   // page should be demonstrating: it costs zero JS per frame. SVG is the escape hatch
   // for the motions CSS cannot express, so it is the one you have to ask for.
