@@ -130,9 +130,8 @@ describe("envelope", () => {
     // otherwise the cell steps across the p = 0 → 1 seam once per cycle, which the
     // eye reads as a twitch rather than a wave
     for (const [name, env] of Object.entries(ENVELOPES)) {
-      // a gaussian is symmetric about p = 0, and a stepped envelope never reaches
-      // envelope() at all — its stops describe the RANGE of the shelves instead
-      if (env.gauss || env.steps) continue;
+      // a gaussian is symmetric about p = 0 and never reaches envelope() at all
+      if (env.gauss) continue;
       const first = env.stops[0]![1];
       const last = env.stops[env.stops.length - 1]![1];
       expect(first, `${name} starts at rest`).toBeCloseTo(env.rest, 6);
@@ -140,16 +139,75 @@ describe("envelope", () => {
     }
   });
 
-  it("a stepped envelope spans exactly rest…peak, and is dark outside its duty", () => {
-    // `chase` keeps a stop table even though `level()` ignores it, so the table has
-    // to agree with the branch that actually runs — otherwise it is dead data that
-    // reads as if it described the motion
+  it("no envelope is quantised into shelves, which is what makes a motion read as cheap", () => {
+    // Reported as "chasing is not smooth, it has no delta". `chase` carried `steps: 3`, so
+    // the entire motion had three brightness values - 0.16, 0.58, 1.00 - and a cell
+    // crossing a shelf jumped. The envelope file's own rule says never quantise into
+    // shelves; `chase` was the one that broke it, and the only preset using it.
+    for (const [name, env] of Object.entries(ENVELOPES)) {
+      expect("steps" in env, name + " must not be quantised into shelves").toBe(false);
+      const levels = new Set(
+        Array.from({ length: 401 }, (_, i) => softLevel(i / 400, env, 0).toFixed(3)),
+      );
+      expect(
+        levels.size,
+        name +
+          " has only " +
+          levels.size +
+          " distinct brightness levels across a cycle; a wave needs a gradient, not shelves",
+      ).toBeGreaterThanOrEqual(24);
+    }
+  });
+
+  it("chasing has a tail and a delta, like the comet it now resembles", () => {
     const env = ENVELOPES.chase;
-    expect(env.steps).toBe(3);
-    expect(env.stops[0]![1]).toBeCloseTo(env.rest, 6);
-    expect(env.stops[env.stops.length - 1]![1]).toBe(1);
-    expect(softLevel(0, env, 0)).toBeCloseTo(env.rest, 6);
-    expect(softLevel(env.duty! + 0.01, env, 0)).toBeCloseTo(env.rest, 6);
+    // sample the crest and the tail at their own positions rather than at fractions of
+    // `duty`: the rise is short and the decay is long, so a fraction of the band is not
+    // where either end of it lives
+    const crestAt = env.stops.find(([, v]) => v === 1)![0];
+    const peak = softLevel(crestAt, env, 0);
+    expect(peak, "chasing reaches full brightness").toBeCloseTo(1, 6);
+    const behind = softLevel(env.duty! * 0.82, env, 0);
+    expect(behind, "brightness falls away after the crest").toBeLessThan(peak * 0.75);
+    expect(behind, "but the tail is still lit, not a cliff down to the floor").toBeGreaterThan(
+      env.rest,
+    );
+
+    let biggest = 0;
+    for (let i = 1; i < 400; i++) {
+      biggest = Math.max(
+        biggest,
+        Math.abs(softLevel(i / 400, env, 0) - softLevel((i - 1) / 400, env, 0)),
+      );
+    }
+    expect(
+      biggest,
+      "chasing jumps " +
+        biggest.toFixed(3) +
+        " between neighbouring samples; a stepped envelope jumps about 0.42",
+    ).toBeLessThan(0.05);
+  });
+
+  it("every envelope is dark outside its duty, and starts and ends at rest", () => {
+    // `chase` used to keep a stop table that `level()` ignored, so the table had to agree
+    // with a branch that has now been deleted along with it. Every envelope is one shape
+    // again: a stop table, a gaussian, or nothing but `rest`. So the claim is the simple
+    // one — whatever an envelope is, it is unlit past its band and lit at neither end.
+    for (const [name, env] of Object.entries(ENVELOPES)) {
+      // Only the stop-table envelopes are dark at both ends. `breathe` is a global pulse
+      // whose band IS the cycle, so it is continuous across the seam by design; `spike` is
+      // a gaussian centred ON the seam, which is how a travelling highlight gets its crest
+      // there without a step. Both are deliberate and neither is a shelf.
+      if (env.duty == null || env.gauss) continue;
+      expect(softLevel(0, env, 0), name + " starts at rest").toBeCloseTo(env.rest, 6);
+      expect(softLevel(0.999, env, 0), name + " ends at rest").toBeCloseTo(env.rest, 6);
+      if (env.duty != null) {
+        expect(softLevel(env.duty + 0.01, env, 0), name + " is dark past its duty").toBeCloseTo(
+          env.rest,
+          6,
+        );
+      }
+    }
   });
 
   it("every stop table is monotonic in position and inside [rest, 1]", () => {
@@ -190,7 +248,6 @@ describe("envelope", () => {
     // can change which value a sample lands on — that is the quantisation showing,
     // not a dimmed crest.
     for (const env of Object.values(ENVELOPES)) {
-      if (env.steps) continue;
       // sample the stop positions TOO: stretching moves them, and a fixed grid can
       // step over the crest and report a dimmed peak that is not there
       const stretchedEnv = stretched(env, 0.9) ?? env;
