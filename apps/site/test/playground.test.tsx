@@ -876,6 +876,17 @@ describe("copying the tuning away", () => {
     expect(copyBody().textContent).toContain("npx");
   });
 
+  it("lives inside the sticky stage, not in the sidebar", () => {
+    // the argument for the placement: you tuned the FIELD, so the button that takes the
+    // tuning away belongs to the field. In the sidebar it read as one more control.
+    const stage = container.querySelector(".playground-stage")!;
+    expect(stage.querySelector(".showcase-copy"), "inside the sticky stage").toBeTruthy();
+    expect(
+      container.querySelector(".playground-side .showcase-copy"),
+      "and not back in the sidebar",
+    ).toBeNull();
+  });
+
   it("keeps the snippet out of the way until it is needed", () => {
     stubClipboard();
     expect(copyBody().getAttribute("aria-hidden"), "long text, folded away by default").toBe(
