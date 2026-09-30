@@ -26,7 +26,6 @@ export function CardGroup<T extends string>({
   options,
   onChange,
   renderPreview,
-  columns,
 }: {
   label: string;
   scope: string;
@@ -36,15 +35,9 @@ export function CardGroup<T extends string>({
   onChange: (value: T) => void;
   /** the card's visual — the engine's own output, not an illustration of it */
   renderPreview: (value: T) => ReactNode;
-  /** the card's fixed width; the row scrolls horizontally past this count */
-  columns?: number;
 }) {
   return (
-    <fieldset
-      className="card-group"
-      style={{ "--card-w": `${CARD_W}px` } as React.CSSProperties}
-      data-overflow={options.length > (columns ?? 4) || undefined}
-    >
+    <fieldset className="card-group" style={{ "--card-w": `${CARD_W}px` } as React.CSSProperties}>
       <legend>{label}</legend>
       <p className="card-scope">{scope}</p>
       <div className="card-grid">

@@ -135,7 +135,6 @@ export function Playground({ initial }: { initial?: Partial<DotMatrixOptions> })
           value={options.silhouette ?? DEFAULTS.silhouette}
           onChange={(silhouette) => set({ silhouette: silhouette as Silhouette })}
           options={SILHOUETTE_KEYS.map((key) => ({ value: key, label: silhouetteLabel(key) }))}
-          columns={6}
           renderPreview={(value) => <SilhouetteCard value={value as Silhouette} size={CARD} />}
         />
 
@@ -145,7 +144,6 @@ export function Playground({ initial }: { initial?: Partial<DotMatrixOptions> })
           value={options.preset ?? DEFAULTS.preset}
           onChange={(preset) => set({ preset: preset as PresetName })}
           options={PRESET_KEYS.map((key) => ({ value: key, label: taskLabel(key) }))}
-          columns={3}
           renderPreview={(value) => (
             <LiveCard
               options={{
@@ -172,7 +170,6 @@ export function Playground({ initial }: { initial?: Partial<DotMatrixOptions> })
             })
           }
           options={DOT_SHAPE_KEYS.map((key) => ({ value: key, label: glyphLabel(key) }))}
-          columns={7}
           renderPreview={(value) => (
             <Still
               options={{
