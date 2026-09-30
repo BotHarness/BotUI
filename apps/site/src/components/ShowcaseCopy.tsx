@@ -32,7 +32,6 @@ export function ShowcaseCopy({ tuning }: { tuning: Tuning }) {
   return (
     <div className="showcase-copy">
       <div className="showcase-copy-head">
-        <p>{m.showcase_note()}</p>
         <button
           type="button"
           // the same refusal handling as InstallCommand: a clipboard write can fail on an
@@ -50,6 +49,7 @@ export function ShowcaseCopy({ tuning }: { tuning: Tuning }) {
         >
           {label}
         </button>
+        <p>{m.showcase_note()}</p>
       </div>
       {/* Always rendered, never conditionally: a `manual` state has to have something to
           select. Hidden with CSS rather than unmounted so the text stays in the DOM. */}

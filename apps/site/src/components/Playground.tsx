@@ -162,6 +162,11 @@ export function Playground({ initial }: { initial?: Partial<DotMatrixOptions> })
             renderer={cssRenderer ? "css" : "svg"}
             key={`${options.preset ?? DEFAULTS.preset}-${options.silhouette}-${options.cols}x${options.rows}-${options.dot}`}
           />
+          {/* The way out, under the field rather than in the sidebar: you tuned this THING,
+              and the button that takes it away belongs to the thing. Spans both columns —
+              it is a full-width primary action, not another sidebar control, and a control
+              that reads as primary should look like one rather than like a ghost button. */}
+          <ShowcaseCopy tuning={{ options, css: cssRenderer }} />
         </div>
 
         {/* Shape, as pictures. Two groups because the engine has two shapes: the field's
@@ -369,10 +374,6 @@ export function Playground({ initial }: { initial?: Partial<DotMatrixOptions> })
             `${m.readout_renderer()}     ${cssRenderer ? "css" : "svg"}   ${m.readout_speed()} ${m.value_speed({ value: (options.speed ?? 1).toFixed(2) })}`,
           ].join("\n")}
         </pre>
-
-        {/* The readout is where a visitor has just SEEN the numbers, so the way out is
-            right here — a copy button over the settings they arrived at. */}
-        <ShowcaseCopy tuning={{ options, css: cssRenderer }} />
       </div>
     </div>
   );
