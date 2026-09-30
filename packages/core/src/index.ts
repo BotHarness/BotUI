@@ -19,6 +19,7 @@
 
 export type {
   AgentState,
+  Direction,
   DotGlyphSpec,
   DotMatrixHandle,
   DotMatrixLayout,
@@ -46,7 +47,18 @@ export {
   touchingDotSize,
 } from "./dot-matrix/layout.js";
 export { SILHOUETTES, SILHOUETTE_KEYS, cellsFor } from "./dot-matrix/lattice.js";
-export { ORDER_KEYS, ORDERS, orderFor, snakePath, spiralPath } from "./dot-matrix/order.js";
+export {
+  directionsFor,
+  directionApplies,
+  ORDER_DIRECTIONS,
+  ORDER_DIRECTION_AXES,
+  ORDER_KEYS,
+  ORDERS,
+  type DirectionAxis,
+  orderFor,
+  snakePath,
+  spiralPath,
+} from "./dot-matrix/order.js";
 export {
   ENVELOPES,
   ENVELOPE_KEYS,

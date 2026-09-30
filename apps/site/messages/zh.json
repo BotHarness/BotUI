@@ -110,5 +110,18 @@
   "showcase_manual": "请手动选中",
   "showcase_intro": "把这个加载指示器用到当前项目。",
   "showcase_style": "import \"@botharness/botui-core/style.css\";",
-  "showcase_note": "你调过的参数，只多不少。"
+  "showcase_note": "你调过的参数，只多不少。",
+  "dir_group": "方向",
+  "dir_axis_along": "行进方向",
+  "dir_axis_series": "行列被访问的顺序",
+  "dir_axis_winding": "缠绕",
+  "dir_axis_radius": "哪一端领先",
+  "dir_leftToRight": "左 → 右",
+  "dir_rightToLeft": "右 → 左",
+  "dir_topToBottom": "上 → 下",
+  "dir_bottomToTop": "下 → 上",
+  "dir_clockwise": "顺时针",
+  "dir_counterClockwise": "逆时针",
+  "dir_outsideIn": "外 → 内",
+  "dir_insideOut": "内 → 外"
 }

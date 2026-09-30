@@ -110,5 +110,18 @@
   "showcase_manual": "select it",
   "showcase_intro": "Add BotUI's loading indicator to this project.",
   "showcase_style": "import \"@botharness/botui-core/style.css\";",
-  "showcase_note": "Your settings, as props — only what you changed."
+  "showcase_note": "Your settings, as props — only what you changed.",
+  "dir_group": "Direction",
+  "dir_axis_along": "Direction of travel",
+  "dir_axis_series": "Which way the rows are visited",
+  "dir_axis_winding": "Winding",
+  "dir_axis_radius": "Which end leads",
+  "dir_leftToRight": "Left → right",
+  "dir_rightToLeft": "Right → left",
+  "dir_topToBottom": "Top → bottom",
+  "dir_bottomToTop": "Bottom → top",
+  "dir_clockwise": "Clockwise",
+  "dir_counterClockwise": "Counter-clockwise",
+  "dir_outsideIn": "Outside → in",
+  "dir_insideOut": "Inside → out"
 }

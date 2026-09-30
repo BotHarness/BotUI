@@ -9,7 +9,7 @@
  */
 import { describe, expect, it } from "vitest";
 import { snippet } from "../src/components/snippet.js";
-import { DEFAULTS, PRESETS, type DotMatrixOptions } from "@botharness/botui-core";
+import { PRESETS, type DotMatrixOptions } from "@botharness/botui-core";
 
 const LOCALE = {
   install: "npx @botharness/botui add dot-matrix",
@@ -176,6 +176,20 @@ describe("the copied snippet", () => {
     expect(out).toContain("dotSize={1.98}");
     expect(out).toContain("speed={1.25}");
     expect(out).toContain("softness={0.333}");
+  });
+
+  it("emits the direction as ONE list prop, so two axes survive together", () => {
+    // The form matters: `direction="counterClockwise"` and a second prop would drop one
+    // axis, and direction is defined as a composition of axis tokens.
+    const out = build({ direction: ["counterClockwise", "insideOut"] });
+    expect(out).toContain('direction={["counterClockwise", "insideOut"]}');
+  });
+
+  it("says nothing about direction when it is the motion's own", () => {
+    // an empty list is what `direction: []` means, and it is the default — stating it on
+    // every copy would be four tokens of noise
+    expect(build({ direction: [] })).not.toContain("direction");
+    expect(build({})).not.toContain("direction");
   });
 
   it("survives a preset that has no table entry, rather than printing undefined", () => {

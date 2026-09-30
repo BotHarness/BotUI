@@ -78,6 +78,40 @@ const POLYGON_NAME: Record<number, () => string> = {
   10: m.poly_decagon,
 };
 
+/**
+ * A direction token, as this page says it.
+ *
+ * An explicit table rather than `m[`dir_${d}`]()`: the dynamic form widens to a union of
+ * every message signature, and a union of functions with different arities cannot be
+ * called. The same reason the other labels here are written out.
+ */
+const DIRECTION_LABEL: Record<string, () => string> = {
+  leftToRight: m.dir_leftToRight,
+  rightToLeft: m.dir_rightToLeft,
+  topToBottom: m.dir_topToBottom,
+  bottomToTop: m.dir_bottomToTop,
+  clockwise: m.dir_clockwise,
+  counterClockwise: m.dir_counterClockwise,
+  outsideIn: m.dir_outsideIn,
+  insideOut: m.dir_insideOut,
+};
+
+export function directionLabel(d: string): string {
+  return DIRECTION_LABEL[d]?.() ?? d;
+}
+
+/** what a direction AXIS controls, for the label above its pair of cards */
+const DIRECTION_AXIS_LABEL: Record<string, () => string> = {
+  along: m.dir_axis_along,
+  series: m.dir_axis_series,
+  winding: m.dir_axis_winding,
+  radius: m.dir_axis_radius,
+};
+
+export function directionAxisLabel(a: string): string {
+  return DIRECTION_AXIS_LABEL[a]?.() ?? a;
+}
+
 export function polygonName(sides: number): string {
   return POLYGON_NAME[sides]?.() ?? m.poly_gon({ sides: String(sides) });
 }

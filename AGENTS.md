@@ -60,6 +60,12 @@ If Astro ships TS 7 support, wire `astro check` back in rather than leaving this
 - **Preserve the size algebra.** `cell = size / ((n - 1)(1 + gap) + dotSize)` is solved, not clipped, which is what
   keeps the field landing exactly on the box at any `dotSize` — including above 1, where the dots touch. If you
   change it, the invariant tests in `packages/core/test/dot-matrix.test.ts` are the specification.
+- **Direction is per-order AXES, not a global "reverse".** `direction` is a list of axis tokens
+  (`["counterClockwise", "insideOut"]`), and each order reads only its own — `ORDER_DIRECTION_AXES` is the
+  contract a UI reads to know what to offer. Offer from that table and never from a hardcoded list: a
+  concentric ring has no winding (a Chebyshev distance is not a walk around a circle), so `clockwise` on it
+  would be a control claiming something the engine cannot do. Reversal is `1 - o`, but reversing the VALUE
+  does not reverse a winding, which is why the two are separate tokens rather than one `reverse` flag.
 - **Comments explain why, and cite the trap.** The strongest comments in this repo record a bug that was found
   the hard way (a seam discontinuity at `p = 0`, a blur that dissolved the crest, a quantised order that no
   envelope could smooth). Keep that density; do not add comments that restate the code.

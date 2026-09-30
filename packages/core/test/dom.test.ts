@@ -15,6 +15,7 @@ import {
   resolveOptions,
   softLevel,
   stylesheet,
+  type Direction,
   type DotMatrixOptions,
 } from "../src/index.js";
 
@@ -134,6 +135,22 @@ describe("the CSS renderer", () => {
     expect(new Set(areas).size).toBe(29);
     expect(areas).toContain("4 / 4"); // the middle
     expect(areas).not.toContain("1 / 1"); // a corner, which a circle drops
+  });
+
+  it("re-ranks the per-cell order when the direction changes, with no CSS of its own", () => {
+    // The claim direction was built on: the CSS renderer hands the motion to the browser
+    // via `--botui-o` and a negative `animation-delay`, so re-ranking the order is all a
+    // reversal needs. If this needed a second set of keyframes, this is where it would show.
+    const cells = (dir: Direction[]) =>
+      [...buildCss({ ...base, cols: 5, rows: 5, direction: dir })!.children].map((c) =>
+        (c as HTMLElement).style.getPropertyValue("--botui-o"),
+      );
+    const cw = cells([]);
+    const ccw = cells(["counterClockwise"]);
+    expect(cw).not.toEqual(ccw);
+    // same cells, ranked the other way round
+    expect([...ccw].sort()).toEqual([...cw].sort());
+    expect(cells(["insideOut"]).every((v, i) => v !== cw[i])).toBe(true);
   });
 
   it("writes the SAME px layout the SVG renderer used", () => {
