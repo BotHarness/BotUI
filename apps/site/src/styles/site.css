@@ -767,7 +767,12 @@ footer {
      unclickable. Clipping on y as well stops the escape in the first place. */
   overflow-x: auto;
   overflow-y: hidden;
-  scroll-snap-type: x proximity;
+  /* NO scroll-snap. `scroll-snap-type: x proximity` + `snap-align: start` made the
+     browser glide a card to the row's edge after the pointer left it — and a click
+     during that glide lands where the card WAS, not where it is. Reported as "some
+     motions need several clicks and will not switch": the cards that took one click
+     were the ones not mid-snap. A pointer-driven scroller has no reason to move on
+     its own, and horizontal scrolling does not need a snap point to work. */
   padding-bottom: 2px;
   scrollbar-width: thin;
   /* the row is a flex child of a flex column; without this it sizes to its content and
@@ -785,7 +790,6 @@ footer {
 .card-grid > .card {
   flex: 0 0 var(--card-w, 86px);
   width: var(--card-w, 86px);
-  scroll-snap-align: start;
 }
 
 .card {
@@ -828,6 +832,13 @@ footer {
 .card-preview {
   display: grid;
   place-items: center;
+  /* The live preview must not receive pointer events. These handlers used to sit on the
+     element INSIDE the card's <label>, so hovering a card started an animation, the
+     re-render interrupted the label's click, and half the cards needed several clicks.
+     Measured with real mouse coordinates; a synthetic click bypasses hit-testing and
+     reports every card as fine. The animation is now driven by CSS from the card's own
+     :hover / :focus-within, so nothing here has to react to the pointer at all. */
+  pointer-events: none;
   color: var(--ink);
   /* fixed, not intrinsic: a row of cards where the label wraps to two lines for one
      value and one line for another leaves the pictures on different baselines.

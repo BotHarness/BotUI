@@ -212,14 +212,12 @@ export function Playground({ initial }: { initial?: Partial<DotMatrixOptions> })
               back to following the preset. */}
           <PercentSlider
             label={m.ctl_stagger()}
-            fraction={options.stagger ?? PRESETS[options.preset ?? DEFAULTS.preset]!.spread}
+            fraction={options.stagger ?? presetSpread(options.preset)}
             max={200}
             display={
               options.stagger == null
                 ? m.value_preset({
-                    value: percentOf(
-                      options.stagger ?? PRESETS[options.preset ?? DEFAULTS.preset]!.spread,
-                    ),
+                    value: percentOf(options.stagger ?? presetSpread(options.preset)),
                   })
                 : percentOf(options.stagger)
             }
@@ -340,6 +338,19 @@ export function Playground({ initial }: { initial?: Partial<DotMatrixOptions> })
 
 const percent = (v: number) => percentOf(v);
 const percentOf = (v: number) => `${Math.round(v * 100)}%`;
+
+/**
+ * A preset's own stagger, or 0 when it has none.
+ *
+ * `PRESETS.off` is `null` — "no motion" has no spread to spread — so reading
+ * `PRESETS[preset].spread` on the `off` card threw a TypeError, the render threw, and the
+ * card group stopped updating. Reported as "some motions will not switch however many times
+ * you click"; the click was landing and the page was dying on it. `breathe` also has spread
+ * 0, but it is a real preset object, so it was never the failure.
+ */
+function presetSpread(preset: PresetName | undefined): number {
+  return PRESETS[preset ?? DEFAULTS.preset]?.spread ?? 0;
+}
 
 /** the radius at which this polygon's corners are fully rounded — a true circle */
 function inradiusOf(sides: number): number {

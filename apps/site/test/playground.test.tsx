@@ -10,7 +10,7 @@ import { afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { Playground } from "../src/components/Playground.js";
-import { DEFAULTS, cellsFor } from "@botharness/botui-core";
+import { DEFAULTS, PRESET_KEYS, cellsFor } from "@botharness/botui-core";
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -268,6 +268,57 @@ describe("the playground controls", () => {
     expect(labels[0]).toMatch(/softness|波宽/i);
     expect(labels[1]).toMatch(/grow|呼吸/i);
     expect(labels[2]).toMatch(/floor|底噪/i);
+  });
+
+  it("every motion card can be selected, including the ones with no preset", () => {
+    // `PRESETS.off` is null — "no motion" has no order and no envelope — and the stagger
+    // control read `PRESETS[preset].spread`. Selecting `off` therefore threw a TypeError,
+    // the render threw, and the whole card group stopped updating: reported as "some
+    // motions will not switch however many times I click". The click was landing the whole
+    // time and the page was dying on it.
+    //
+    // Asserted by clicking EVERY card and reading the field back, because "does not throw"
+    // and "is selected" are different claims: a card can fail to throw and still not select.
+    for (const key of PRESET_KEYS) {
+      expect(
+        () => pick(card(/motion|动效/i, key)),
+        `selecting ${key} must not throw`,
+      ).not.toThrow();
+      const checked = container.querySelector(
+        ".card-group:nth-of-type(2) input:checked, .card-group input:checked",
+      );
+      expect(
+        [...container.querySelectorAll(".card-group")]
+          .find((g) => /motion|动效/i.test(g.querySelector("legend")?.textContent ?? ""))
+          ?.querySelector("input:checked")
+          ?.getAttribute("value"),
+        `${key} must be the selected card after being clicked`,
+      ).toBe(key);
+    }
+  });
+
+  it("the card preview never receives pointer events, so hovering cannot eat a click", () => {
+    // The live preview's pointer handlers sat on a div INSIDE the card's <label>. Moving
+    // the pointer onto a card started an animation, the re-render interrupted the label's
+    // click, and half the cards needed two or three presses. Measured with real mouse
+    // coordinates via CDP: with the handlers present 4 of 7 visible cards registered the
+    // first click; without them, 7 of 7. `element.click()` reports every card as working in
+    // both cases, because a synthetic click bypasses hit-testing altogether — which is why
+    // this shipped once and was not reproducible in the unit tests.
+    const css = readFileSync(join(src, "styles/site.css"), "utf8");
+    const preview = css.match(/\.card-preview \{([^}]*)\}/)?.[1] ?? "";
+    expect(preview, ".card-preview must exist").not.toBe("");
+    expect(
+      preview,
+      "the preview must not take pointer events, or a hover re-render eats the click",
+    ).toMatch(/pointer-events:\s*none/);
+
+    // and no component may hang a pointer handler on it
+    const matrix = readFileSync(join(src, "components/Matrix.tsx"), "utf8");
+    expect(
+      matrix,
+      "LiveCard must not bind pointer handlers: they re-render inside a <label>",
+    ).not.toMatch(/onPointerEnter|onPointerLeave/);
   });
 
   it("the scrolling rows clip their overflow, so a card cannot sit on top of a slider", () => {
