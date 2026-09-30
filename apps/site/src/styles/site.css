@@ -522,19 +522,40 @@ footer {
   min-width: 0;
 }
 
-/* The stage's own controls sit ON the field rather than beside it. Rows, columns and
-   dot size are what you reach for while looking at the field — how many dots, how fat
-   — so they belong to the thing they change. `z-index` is load-bearing: the engine
-   paints its SVG into this box, and an overlay without it sits UNDER the dots. */
+/* The stage's own controls sit beside the field rather than under it. Rows, columns and
+   dot size are what you reach for while looking at the field — how many dots, how fat —
+   so they belong to the thing they change. The stage carries the `z-index` that keeps
+   the card rows from painting over this whole box; the controls do not need one. */
 /* Both columns are sticky, at the same offset, so they scroll as one. Sticky on the
    stage alone left the sliders half a page below the fold: at a 900px viewport the
    side column's `softness`, `grow` and `floor` sat at y≈1356, unreachable until you had
    scrolled past two card groups — which is what "there is no way to adjust these" was.
    A control you cannot see is a control you cannot find, and the whole page is about
    adjusting things while looking at them. */
+/* A fade under the stage, so the card rows read as passing BEHIND it rather than as
+   being chopped in half by its edge. Content scrolling under a pinned element is what
+   sticky is for, but a card sliced through its middle reads as a rendering fault, and
+   the fade costs one gradient. */
+.playground-stage::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 100%;
+  height: 24px;
+  background: linear-gradient(to bottom, var(--card), transparent);
+  pointer-events: none;
+}
+
 .playground-stage {
   position: sticky;
   top: 8px;
+  /* The card rows scroll PAST this box, and they used to paint over it: sticky and
+     `position: relative` are both positioned, and with `z-index: auto` on both the
+     later one in the DOM wins — so `SHAPE` and its cards landed on top of `dot/cell`
+     and the stage looked like it had lost its own controls. Sticky elements need an
+     explicit layer; this is the thing `z-index: auto` does not do for you. */
+  z-index: 2;
 }
 
 .playground-stage {
@@ -553,7 +574,6 @@ footer {
 }
 
 .stage-controls {
-  z-index: 2;
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -705,7 +725,6 @@ footer {
    A radio group, so the browser supplies "3 of 14", arrow-key movement and a single
    tab stop — none of which a grid of buttons gets for free. */
 .card-group {
-  position: relative;
   border: 0;
   border-top: 1px solid var(--line);
   margin: 0;
@@ -752,11 +771,6 @@ footer {
   flex: 0 0 var(--card-w, 86px);
   width: var(--card-w, 86px);
   scroll-snap-align: start;
-}
-
-.card-group[data-overflow]::after {
-  content: "";
-  position: absolute;
 }
 
 .card {

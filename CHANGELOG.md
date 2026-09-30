@@ -68,6 +68,9 @@ All notable changes to BotUI are recorded here. The format follows
 
 ### Fixed
 
+- **The card rows painted over the sticky stage.** `position: sticky` and `position: relative` are both positioned elements, and with `z-index: auto` on both the later one in the DOM wins — so `SHAPE`, its scope line and its cards landed on top of `dot/cell` and the stage looked like it had lost its own controls. The stage now carries an explicit layer, and the card group no longer needs one.
+- A fade under the stage, so the rows read as passing behind it rather than being sliced through the middle by its edge. Content scrolling under a pinned element is what sticky is for; a card cut in half just reads as a rendering fault.
+
 - **`softness`, `grow` and `floor` were on the page but could not be reached.** They sat below the fold of a side column holding 1001px of content in an 813px viewport, under a grid of picture cards, in a column with no visible bottom — "there is no way to adjust these" was a position bug, not a missing control. The side column is now sticky with its own scrollport, the picture cards moved beside the field they describe, and the three moved ahead of the geometric detail as their own group, because what a field _feels_ like is asked before how big it is. The readout moved below the playground: it is output, not input, and it was the cheapest 112px in the column.
 
 - **Three playground sliders were broken in the same way, and none of the tests could see
