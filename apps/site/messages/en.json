@@ -103,5 +103,6 @@
   "scope_field_shape": "Changes the outline of the whole field",
   "scope_dot_shape": "Changes each individual dot",
   "scope_motion": "Hover or focus a card to play it",
-  "group_timing": "Timing"
+  "group_timing": "Timing",
+  "group_envelope": "Envelope"
 }

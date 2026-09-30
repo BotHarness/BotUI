@@ -156,6 +156,42 @@ describe("the playground controls", () => {
     expect(readout()).toContain("ring");
   });
 
+  it("the sliders people reported as unreachable come before the ones nobody opens first", () => {
+    // `softness`, `grow` and `floor` were reported as having "no way to adjust them".
+    // They were on the page the whole time: the side column was 1001px of content in an
+    // 813px viewport, so they sat below the fold of a column nobody could see the
+    // bottom of, under a card grid above them. Position is the bug, not absence, and
+    // only an ORDER assertion catches a regression here — a test that checked the
+    // controls exist would have passed while they were unreachable.
+    // by index rather than by string search on the joined text: the legend is CSS
+    // `text-transform: uppercase`d on screen but the DOM text is `Envelope`, and a
+    // lowercase `.indexOf` found nothing while the control was right there
+    const legends = [...container.querySelectorAll(".playground-side .playground-group")].map(
+      (g) => g.querySelector("legend")?.textContent ?? "",
+    );
+    const order = legends.join("|");
+    const envelopeAt = legends.findIndex((l) => /envelope|包络/i.test(l));
+    const detailAt = legends.findIndex((l) => /dot detail/i.test(l));
+    expect(envelopeAt, `ENVELOPE must exist in the side column: ${order}`).toBeGreaterThanOrEqual(
+      0,
+    );
+    expect(envelopeAt, "the envelope sliders must come BEFORE the geometric detail").toBeLessThan(
+      detailAt,
+    );
+
+    // and the three of them are the ones named, in this order
+    const envelope = [...container.querySelectorAll(".playground-side .playground-group")].find(
+      (g) => /envelope|包络/i.test(g.querySelector("legend")?.textContent ?? ""),
+    );
+    const labels = [...(envelope?.querySelectorAll(".playground-field") ?? [])].map((f) =>
+      (f.querySelector("span")?.textContent ?? "").slice(0, 14),
+    );
+    expect(labels).toHaveLength(3);
+    expect(labels[0]).toMatch(/softness|波宽/i);
+    expect(labels[1]).toMatch(/grow|呼吸/i);
+    expect(labels[2]).toMatch(/floor|底噪/i);
+  });
+
   it("a card group is one tab stop with one selection, not a grid of buttons", () => {
     // A grid of <button>s would make every card a tab stop and would leave the group
     // with no announced position ("3 of 14"), and arrow keys would do nothing. Radios
@@ -195,14 +231,24 @@ describe("the playground controls", () => {
     // slider hid it by indexing into the key list; a card shows its selection, so it
     // could not. Asserted against the ENGINE's default, not a literal, so the test
     // cannot drift the same way the code did.
-    const checked = [...container.querySelectorAll(".card-group input:checked")].map(
-      (r) => (r as HTMLInputElement).value,
-    );
-    expect(checked, "one card selected per group, and each is the engine's own default").toEqual([
+    // matched per GROUP rather than by document order: the groups were reordered (motion
+    // now sits above shape, next to the field it animates), and asserting on the
+    // flattened list would fail on a layout change rather than on a bug.
+    const checkedIn = (legend: RegExp) =>
+      [...container.querySelectorAll(".card-group")]
+        .find((g) => legend.test(g.querySelector("legend")?.textContent ?? ""))
+        ?.querySelector("input:checked")
+        ?.getAttribute("value");
+
+    expect(checkedIn(/shape ·|形状/i), "the silhouette card is the engine's default").toBe(
       DEFAULTS.silhouette,
+    );
+    expect(checkedIn(/dot shape|点的形状/i), "the dot card is the engine's default").toBe(
       DEFAULTS.dot,
+    );
+    expect(checkedIn(/motion|动效/i), "the motion card is the engine's default").toBe(
       DEFAULTS.preset,
-    ]);
+    );
     const drawn = field().length;
     expect(drawn, "the rendered field matches the selected silhouette").toBe(
       cellsFor(DEFAULTS.cols, DEFAULTS.rows, DEFAULTS.silhouette).length,

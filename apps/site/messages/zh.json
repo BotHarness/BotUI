@@ -103,5 +103,6 @@
   "scope_field_shape": "改变整个点阵的外轮廓",
   "scope_dot_shape": "改变每一个点本身",
   "scope_motion": "悬停或聚焦卡片即可播放",
-  "group_timing": "节奏"
+  "group_timing": "节奏",
+  "group_envelope": "包络"
 }
