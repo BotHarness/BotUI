@@ -1,30 +1,5 @@
 # Changelog
 
-All notable changes to BotUI are recorded here. The format follows
-[Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the registry is versioned with the packages.
-
-## [0.1.1] — 2026-09-30
-
-### Added
-
-- A README and full npm metadata for all three packages: `repository` (with the `directory`
-  that lands the link on that package's subtree), `homepage`, `bugs` and `keywords`. The 0.1.0
-  pages rendered with no body and no route back to the source.
-
-### Changed
-
-- **The playground opens on the CSS renderer**, as a switch on the stage beside the field it renders. It is the default because it costs zero JS per frame and SVG is the escape hatch for the motions CSS cannot express — so the field you see on arrival is the one most people will actually ship. The refusal note rides on the switch, so the reason a motion has no CSS form is where you would turn it on.
-- **The picture cards scroll sideways instead of wrapping.** A wrapped grid grows taller as options are added, and the column it lives in is already taller than the viewport, so every extra shape pushed the sliders further down. A row costs the column nothing. `SHAPE` leads them, then `MOTION`, then `DOT SHAPE`.
-- The playground opens at a denser dot/cell than the engine's default. At 55% a field reads as scattered pixels, and the page's subject is what a dot IS; the engine's own default is untouched, because that is the library's choice.
-- The side column is not sticky again. Sticky on both columns made the sliders reachable but turned the whole right-hand side into a pane you had to scroll independently, which is worse than letting it travel with the page.
-
-- **The playground's shape and motion controls are pictures now, not sliders.** `sides` and `silhouette` sat in one list under one "shape" heading, so a reader could not tell which moved the whole field and which moved each dot; the silhouette is now a card group whose cards change the field's outline and a second group whose cards change the dot inside it, each stating its scope in the same place. Presets were a `<select>` of bare names, which cannot convey that `spiral` and `ring` differ; they are cards that run the engine, and they animate once the pointer or focus reaches them rather than twelve at once.
-- Every card draws the engine's own output — `field()` for a still, `cellsFor()` for a silhouette, the live field for a motion. A card that drew its own approximation of a dot would be a second implementation of the thing it advertises, and would drift the moment the glyph code changed. The phase is deliberately not 0: a traversal lives in the difference between cells, and at t=0 they are all at rest, so a still card showed a uniform blob.
-- Rows and columns are steppers on the stage rather than sliders in the side column, and `dot/cell` moved onto the stage too: they are what you reach for while looking at the field. Overall `size` moved to last, because it decides how much room the field takes rather than what it looks like.
-
-- `check-registry.mjs` now fails the build when a published package has no README, no
-  `repository` pointing at this repo, no homepage or no bugs URL.
-
 ## [Unreleased]
 
 ### Changed
@@ -115,6 +90,41 @@ All notable changes to BotUI are recorded here. The format follows
   config still placing English at `/en/` while Astro had been writing it to `/`. A
   `paraglide compile` run from the CLI would have generated a runtime that disagreed with the
   one that ships. Both now read `project.inlang/paraglide.options.js`.
+
+All notable changes to BotUI are recorded here. The format follows
+[Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the registry is versioned with the packages.
+
+## [0.1.2] — 2026-09-30
+
+### Fixed
+
+- **`chasing` had no gradient — it was three shelves, not a wave.** `chase` carried `steps: 3`, so the whole motion had exactly three brightness values (0.16, 0.58, 1.00) and every cell crossing a shelf jumped. Measured across a cycle, `chase` had **3** distinct brightness levels where `comet` had **78**. With `spread: 0.34` around a ring, several cells crossed a shelf in the same frame, which is what read as unsmooth. It is now a stop table with a fast rise and a six-stop decay: **173** levels, and the largest step between neighbouring samples fell from ~0.42 to **0.03**. The trailing lit tail behind the crest is new.
+
+### Removed
+
+- **`Envelope.steps`.** With `chase` no longer quantised, nothing read it: the field on `Envelope`, the `level()` branch, the `data-timing="steps-N"` switch, and the `steps(3, end)` CSS rule were all describing a behaviour that no longer existed. **Anyone constructing a custom `Envelope` with `steps` must move to `stops`.** It was never in the documented option vocabulary and is not exported, and the package had no consumers at the time — so this is a clean migration rather than a deprecation.
+
+## [0.1.1] — 2026-09-30
+
+### Added
+
+- A README and full npm metadata for all three packages: `repository` (with the `directory`
+  that lands the link on that package's subtree), `homepage`, `bugs` and `keywords`. The 0.1.0
+  pages rendered with no body and no route back to the source.
+
+### Changed
+
+- **The playground opens on the CSS renderer**, as a switch on the stage beside the field it renders. It is the default because it costs zero JS per frame and SVG is the escape hatch for the motions CSS cannot express — so the field you see on arrival is the one most people will actually ship. The refusal note rides on the switch, so the reason a motion has no CSS form is where you would turn it on.
+- **The picture cards scroll sideways instead of wrapping.** A wrapped grid grows taller as options are added, and the column it lives in is already taller than the viewport, so every extra shape pushed the sliders further down. A row costs the column nothing. `SHAPE` leads them, then `MOTION`, then `DOT SHAPE`.
+- The playground opens at a denser dot/cell than the engine's default. At 55% a field reads as scattered pixels, and the page's subject is what a dot IS; the engine's own default is untouched, because that is the library's choice.
+- The side column is not sticky again. Sticky on both columns made the sliders reachable but turned the whole right-hand side into a pane you had to scroll independently, which is worse than letting it travel with the page.
+
+- **The playground's shape and motion controls are pictures now, not sliders.** `sides` and `silhouette` sat in one list under one "shape" heading, so a reader could not tell which moved the whole field and which moved each dot; the silhouette is now a card group whose cards change the field's outline and a second group whose cards change the dot inside it, each stating its scope in the same place. Presets were a `<select>` of bare names, which cannot convey that `spiral` and `ring` differ; they are cards that run the engine, and they animate once the pointer or focus reaches them rather than twelve at once.
+- Every card draws the engine's own output — `field()` for a still, `cellsFor()` for a silhouette, the live field for a motion. A card that drew its own approximation of a dot would be a second implementation of the thing it advertises, and would drift the moment the glyph code changed. The phase is deliberately not 0: a traversal lives in the difference between cells, and at t=0 they are all at rest, so a still card showed a uniform blob.
+- Rows and columns are steppers on the stage rather than sliders in the side column, and `dot/cell` moved onto the stage too: they are what you reach for while looking at the field. Overall `size` moved to last, because it decides how much room the field takes rather than what it looks like.
+
+- `check-registry.mjs` now fails the build when a published package has no README, no
+  `repository` pointing at this repo, no homepage or no bugs URL.
 
 ## [0.1.0] — 2026-09-30
 
