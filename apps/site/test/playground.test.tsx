@@ -23,6 +23,7 @@ let container: HTMLDivElement;
 let root: Root;
 
 beforeEach(() => {
+  svgForced = false;
   container = document.createElement("div");
   document.body.appendChild(container);
   root = createRoot(container);
@@ -36,13 +37,31 @@ afterEach(() => {
   container.remove();
 });
 
-/** the rendered field, as a comparable signature */
-const field = () =>
-  [...container.querySelectorAll(".playground-stage svg path")].map((p) => ({
+/**
+ * The rendered field, as a comparable signature.
+ *
+ * Read from the SVG renderer, and the SVG renderer is switched ON first: the playground
+ * now opens on CSS — it is the cheaper renderer and the one worth demonstrating — and a
+ * CSS field paints `@keyframes`, so there are no paths to read. Every geometry
+ * assertion below is about the engine's geometry, which both renderers share, so
+ * measuring it through SVG is measuring the same thing.
+ */
+let svgForced = false;
+const useSvgRenderer = () => {
+  if (svgForced) return;
+  const toggle = container.querySelector<HTMLInputElement>(".stage-toggle input");
+  if (toggle?.checked) act(() => toggle.click());
+  svgForced = true;
+};
+
+const field = () => {
+  useSvgRenderer();
+  return [...container.querySelectorAll(".playground-stage svg path")].map((p) => ({
     d: p.getAttribute("d"),
     t: p.getAttribute("transform"),
     o: p.getAttribute("fill-opacity"),
   }));
+};
 
 /** a slider inside a specific column, so the stage's own controls cannot be mistaken
  *  for the side column's identically-named ones */
@@ -131,6 +150,37 @@ const readout = () => container.querySelector(".playground-readout")?.textConten
 describe("the playground controls", () => {
   it("paints a field on mount", () => {
     expect(field().length).toBeGreaterThan(10);
+  });
+
+  it("opens on the CSS renderer, because it is the one worth demonstrating", () => {
+    // CSS costs zero JS per frame and SVG is the escape hatch for the motions CSS
+    // cannot express, so the cheaper one is the default and the other has to be asked
+    // for. It also means the field on arrival is the one most people will actually ship.
+    const toggle = container.querySelector<HTMLInputElement>(".stage-toggle input");
+    expect(toggle, "the renderer switch lives on the stage").toBeTruthy();
+    expect(toggle!.checked, "CSS renderer is the default").toBe(true);
+    expect(
+      toggle!.disabled,
+      "the default preset is expressible in CSS, so the switch must be usable",
+    ).toBe(false);
+    // and the field really is CSS: no SVG paths in the stage
+    expect(container.querySelectorAll(".playground-stage svg path").length).toBe(0);
+  });
+
+  it("refuses the CSS renderer only for a motion it cannot express", () => {
+    // the inverse of the above: `columns` staggers each column's entry, which a
+    // per-dot animation-delay does not model, so the engine refuses rather than
+    // approximating. The toggle must disable AND say why, rather than showing a
+    // different animation under the same name.
+    const toggle = container.querySelector<HTMLInputElement>(".stage-toggle input")!;
+    pick(card(/motion|动效/i, "columns"));
+    expect(toggle.disabled, "a per-dot delay cannot move a highlight").toBe(true);
+    expect(
+      container.querySelector(".stage-toggle")?.textContent,
+      "and it has to say so where the switch is",
+    ).toMatch(/refuses it/);
+    pick(card(/motion|动效/i, "spiral"));
+    expect(toggle.disabled, "spiral is expressible, so the switch comes back").toBe(false);
   });
 
   it("has a speed control, because a loading field you cannot slow down is a GIF", () => {
@@ -371,10 +421,11 @@ describe("the playground controls", () => {
   });
 
   it("refuses the CSS renderer for a motion it cannot express, and says why", () => {
-    const checkbox = container.querySelector(".playground-check input") as HTMLInputElement;
+    const checkbox = container.querySelector(".stage-toggle input") as HTMLInputElement;
     pick(card(/motion|动效/i, "columns"));
     expect(checkbox.disabled, "a per-dot delay cannot move a highlight").toBe(true);
-    expect(container.querySelector(".playground-note")?.textContent).toMatch(/refuses it/);
+    // the explanation moved onto the toggle itself when it joined the stage
+    expect(container.querySelector(".stage-toggle")?.textContent).toMatch(/refuses it/);
   });
 });
 

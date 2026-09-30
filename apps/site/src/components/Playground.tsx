@@ -25,8 +25,15 @@ import {
 const CARD = 44;
 
 export function Playground({ initial }: { initial?: Partial<DotMatrixOptions> }) {
-  const [options, setOptions] = useState<DotMatrixOptions>({ ...initial });
-  const [cssRenderer, setCssRenderer] = useState(false);
+  // The page opens at a denser dot/cell than the engine's default: at 55% a field
+  // reads as scattered pixels, and this page's subject is what a dot IS. The engine's
+  // own default is untouched — that is the library's choice, and the playground is
+  // allowed to disagree with it.
+  const [options, setOptions] = useState<DotMatrixOptions>({ dotSize: 0.78, ...initial });
+  // CSS by default, because it is the cheaper renderer and this is the one a product
+  // page should be demonstrating: it costs zero JS per frame. SVG is the escape hatch
+  // for the motions CSS cannot express, so it is the one you have to ask for.
+  const [cssRenderer, setCssRenderer] = useState(true);
 
   const set = (patch: Partial<DotMatrixOptions>) => setOptions((o) => ({ ...o, ...patch }));
 
@@ -43,7 +50,10 @@ export function Playground({ initial }: { initial?: Partial<DotMatrixOptions> })
 
   // a motion the CSS renderer cannot express has to be refused, not approximated — the
   // page says so instead of showing a different animation under the same name
-  const cssAvailable = cssRenderable(options.preset);
+  // `?? DEFAULTS.preset` like every other read of the preset: `cssRenderable(undefined)`
+  // is false, so without the default the switch claimed the engine refused a motion it
+  // can express — and it was disabled on first paint for the default field.
+  const cssAvailable = cssRenderable(options.preset ?? DEFAULTS.preset);
   const sides = options.spec?.sides ?? GLYPH_DEFAULTS.sides;
 
   // the dot cards show ONE field so the only difference between them is the dot: a
@@ -92,17 +102,43 @@ export function Playground({ initial }: { initial?: Partial<DotMatrixOptions> })
               compact
               onChange={(v) => set({ dotSize: v / 100 })}
             />
+            <label className="stage-toggle" title={`${m.css_renderer_note()} ${m.css_refused()}`}>
+              <input
+                type="checkbox"
+                checked={cssRenderer}
+                disabled={!cssAvailable}
+                onChange={(e) => setCssRenderer(e.target.checked)}
+                aria-label={m.css_renderer()}
+              />
+              <span className="stage-toggle-track" aria-hidden="true">
+                <span className="stage-toggle-knob" />
+              </span>
+              <span className="stage-toggle-label">
+                {m.css_renderer()}
+                {!cssAvailable && <em>{m.css_refused()}</em>}
+              </span>
+            </label>
           </div>
           <Matrix
             {...options}
             renderer={cssRenderer ? "css" : "svg"}
-            key={`${options.preset}-${options.silhouette}-${options.cols}x${options.rows}-${options.dot}`}
+            key={`${options.preset ?? DEFAULTS.preset}-${options.silhouette}-${options.cols}x${options.rows}-${options.dot}`}
           />
         </div>
 
         {/* Shape, as pictures. Two groups because the engine has two shapes: the field's
             outline and the dot inside it. A single slider list called them both "shape"
             and left the reader to guess which was which. */}
+        <CardGroup
+          label={m.group_shape()}
+          scope={m.scope_field_shape()}
+          value={options.silhouette ?? DEFAULTS.silhouette}
+          onChange={(silhouette) => set({ silhouette: silhouette as Silhouette })}
+          options={SILHOUETTE_KEYS.map((key) => ({ value: key, label: silhouetteLabel(key) }))}
+          columns={6}
+          renderPreview={(value) => <SilhouetteCard value={value as Silhouette} size={CARD} />}
+        />
+
         <CardGroup
           label={m.group_motion()}
           scope={m.scope_motion()}
@@ -123,16 +159,6 @@ export function Playground({ initial }: { initial?: Partial<DotMatrixOptions> })
               size={56}
             />
           )}
-        />
-
-        <CardGroup
-          label={m.group_shape()}
-          scope={m.scope_field_shape()}
-          value={options.silhouette ?? DEFAULTS.silhouette}
-          onChange={(silhouette) => set({ silhouette: silhouette as Silhouette })}
-          options={SILHOUETTE_KEYS.map((key) => ({ value: key, label: silhouetteLabel(key) }))}
-          columns={6}
-          renderPreview={(value) => <SilhouetteCard value={value as Silhouette} size={CARD} />}
         />
 
         <CardGroup
@@ -298,17 +324,6 @@ export function Playground({ initial }: { initial?: Partial<DotMatrixOptions> })
             onChange={(v) => set({ gapY: v / 100 })}
           />
         </Group>
-
-        <label className="playground-check">
-          <input
-            type="checkbox"
-            checked={cssRenderer}
-            disabled={!cssAvailable}
-            onChange={(e) => setCssRenderer(e.target.checked)}
-          />
-          {m.css_renderer()} <span>{m.css_renderer_note()}</span>
-        </label>
-        {!cssAvailable && <p className="playground-note">{m.css_refused()}</p>}
 
         <pre className="playground-readout">
           {[

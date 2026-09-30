@@ -1,6 +1,9 @@
 import type { ReactNode } from "react";
 import { cellsFor, glyphPath, type Silhouette } from "@botharness/botui-core";
 
+/** the card's width in the scrolling row: enough for the picture plus two label lines */
+const CARD_W = 86;
+
 /**
  * A choice you can see rather than a control you have to imagine.
  *
@@ -33,11 +36,15 @@ export function CardGroup<T extends string>({
   onChange: (value: T) => void;
   /** the card's visual — the engine's own output, not an illustration of it */
   renderPreview: (value: T) => ReactNode;
-  /** how many cards per row; the CSS handles wrapping, this sets the target */
+  /** the card's fixed width; the row scrolls horizontally past this count */
   columns?: number;
 }) {
   return (
-    <fieldset className="card-group" style={{ "--cards": columns ?? 4 } as React.CSSProperties}>
+    <fieldset
+      className="card-group"
+      style={{ "--card-w": `${CARD_W}px` } as React.CSSProperties}
+      data-overflow={options.length > (columns ?? 4) || undefined}
+    >
       <legend>{label}</legend>
       <p className="card-scope">{scope}</p>
       <div className="card-grid">
