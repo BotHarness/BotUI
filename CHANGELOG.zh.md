@@ -3,6 +3,18 @@
 BotUI 的所有值得注意的变更都记录在此。格式遵循
 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，registry 与各 package 一起版本化。
 
+## [0.1.1] — 2026-09-30
+
+### 新增
+
+- 三个包都补上了 README 和完整的 npm 元数据：`repository`（含 `directory`，让链接落到该包的
+  子目录）、`homepage`、`bugs`、`keywords`。0.1.0 的页面既没有正文，也没有回到源码的入口。
+
+### 变更
+
+- `check-registry.mjs` 现在会在已发布的包缺少 README、`repository` 未指向本仓库、缺少 homepage
+  或 bugs URL 时让构建失败。
+
 ## [Unreleased]
 
 ### 变更

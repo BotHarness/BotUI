@@ -3,6 +3,19 @@
 All notable changes to BotUI are recorded here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the registry is versioned with the packages.
 
+## [0.1.1] — 2026-09-30
+
+### Added
+
+- A README and full npm metadata for all three packages: `repository` (with the `directory`
+  that lands the link on that package's subtree), `homepage`, `bugs` and `keywords`. The 0.1.0
+  pages rendered with no body and no route back to the source.
+
+### Changed
+
+- `check-registry.mjs` now fails the build when a published package has no README, no
+  `repository` pointing at this repo, no homepage or no bugs URL.
+
 ## [Unreleased]
 
 ### Changed
