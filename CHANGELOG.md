@@ -42,6 +42,7 @@ All notable changes to BotUI are recorded here. The format follows
   gitignored, so `typecheck` and `verify` now run this first: from a clean clone they used to
   fail on imports that were not on disk yet.
 - **Publishing to npm needed a token, and this account's 2FA is a passkey**, which the CLI cannot answer — WebAuthn needs a browser. `scripts/npm-token.sh` collects a granular access token, validates it against the registry, and stores it in `npm_release.token` (gitignored, mode 600); it re-prompts on its own once the token expires or is revoked. `release.mjs` reads that file and hands the token to npm through the child process's environment rather than an argv flag, because argv is readable through `ps` and command lines land in CI logs. A project `.npmrc` would have applied the token to every npm command in the repo, `npm install` included.
+- **The three published packages had no README and no repository link**, so their npm pages rendered with no body and no way back to the source — indistinguishable from a package nobody should trust, with no URL to file an issue against. Each package now has a README written for its own audience and declares `repository` (with the `directory` that lands the link on its subtree), `homepage`, `bugs` and `keywords`. `check-registry.mjs` enforces all four, verified by deleting a README and a `repository` and watching the build fail.
 
 ### Fixed
 

@@ -40,6 +40,7 @@ BotUI 的所有值得注意的变更都记录在此。格式遵循
   （已 gitignore，权限 600）；token 过期或被撤销后它会自行重新询问。`release.mjs` 读取该文件，
   通过子进程的环境变量把 token 交给 npm，而不是作为 argv 参数 —— argv 能被 `ps` 读到，命令行也会进
   CI 日志。项目级 `.npmrc` 同样可行，但那会让 token 对仓库里每一条 npm 命令生效，连 `npm install` 一起。
+- **三个已发布的包既没有 README 也没有仓库链接**，npm 页面因此既没有正文、也没有回到源码的入口 —— 这和"不值得信任的包"看起来完全一样，而且连 issue 都不知道该往哪提。现在每个包都有自己的 README（按各自的读者写的），并声明 `repository`（含 `directory`，让链接直接落到该包子目录）、`homepage`、`bugs` 和 `keywords`。这四项由 `check-registry.mjs` 强制检查 —— 通过删掉 README 和 `repository`、确认构建失败来验证过。
 
 ### 修复
 

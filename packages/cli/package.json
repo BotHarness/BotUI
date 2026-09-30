@@ -2,7 +2,26 @@
   "name": "@botharness/botui",
   "version": "0.1.0",
   "description": "Install BotUI components into your project — copy-and-own, like shadcn",
+  "keywords": [
+    "agent-ui",
+    "cli",
+    "copy-and-own",
+    "dot-matrix",
+    "npx",
+    "registry",
+    "shadcn"
+  ],
+  "homepage": "https://ui.botharness.ai",
+  "bugs": {
+    "url": "https://github.com/BotHarness/BotUI/issues",
+    "source": "https://github.com/BotHarness/BotUI/issues"
+  },
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/BotHarness/BotUI.git",
+    "directory": "packages/cli"
+  },
   "bin": {
     "botui": "./dist/index.js"
   },
