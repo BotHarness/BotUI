@@ -68,6 +68,11 @@ All notable changes to BotUI are recorded here. The format follows
 
 ### Fixed
 
+- **Some motion cards could not be clicked, and one of them crashed the page.** Three separate causes, all invisible to `element.click()` and all found by dispatching real mouse coordinates through CDP:
+  - The live preview bound `onPointerEnter` on a div **inside the card's `<label>`**. Moving the pointer onto a card started an animation, the re-render interrupted the label's click, and half the cards needed two or three presses. The preview is now `pointer-events: none` and nothing in it reacts to the pointer. Measured: **4 of 7** visible cards registered the first click before, **7 of 7** after.
+  - `scroll-snap-type: x proximity` made the browser glide a card to the row's edge after the pointer left it, so a click landing during that glide hit where the card _was_. Removed: a pointer-driven scroller has no reason to move on its own.
+  - `PRESETS.off` is `null` — no motion has no order or envelope — and the stagger control read `PRESETS[preset].spread`. Selecting `off` threw a TypeError, the render threw, and the card group stopped updating. The click was landing the whole time; the page was dying on it.
+
 - **The card rows painted over the sticky stage.** `position: sticky` and `position: relative` are both positioned elements, and with `z-index: auto` on both the later one in the DOM wins — so `SHAPE`, its scope line and its cards landed on top of `dot/cell` and the stage looked like it had lost its own controls. The stage now carries an explicit layer, and the card group no longer needs one.
 - A fade under the stage, so the rows read as passing behind it rather than being sliced through the middle by its edge. Content scrolling under a pinned element is what sticky is for; a card cut in half just reads as a rendering fault.
 

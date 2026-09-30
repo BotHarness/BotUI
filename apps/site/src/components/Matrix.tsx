@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import {
   createDotMatrix,
   field,
@@ -130,16 +130,19 @@ export function LiveCard({
   size: number;
   className?: string;
 }) {
-  const [running, setRunning] = useState(false);
+  // `pointer-events: none` is LOAD-BEARING, not cosmetic. These pointer handlers used to
+  // sit on this div, which lives INSIDE the card's <label>. Moving the pointer onto a card
+  // therefore started an animation, which re-rendered this subtree, and the re-render
+  // interrupted the label's click: half the cards needed two or three clicks and some would
+  // not switch at all. Measured with real mouse coordinates rather than synthetic clicks —
+  // `element.click()` bypasses hit-testing entirely and reported every card as working.
+  //
+  // So nothing here receives pointer events at all. The play state is driven by CSS
+  // instead: the animation runs while the card is hovered or has focus within, and the
+  // element underneath is the one that gets the events.
   return (
-    <div
-      className={className}
-      onPointerEnter={() => setRunning(true)}
-      onPointerLeave={() => setRunning(false)}
-      onFocus={() => setRunning(true)}
-      onBlur={() => setRunning(false)}
-    >
-      <Matrix {...options} size={size} playing={running} />
+    <div className={className}>
+      <Matrix {...options} size={size} playing={true} />
     </div>
   );
 }
