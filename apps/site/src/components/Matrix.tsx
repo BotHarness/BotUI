@@ -1,6 +1,8 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   createDotMatrix,
+  field,
+  resolveOptions,
   type DotMatrixHandle,
   type DotMatrixOptions,
 } from "@botharness/botui-core";
@@ -53,4 +55,91 @@ export function Matrix({ playing = true, className, ...options }: MatrixProps) {
   }, [playing]);
 
   return <div ref={host} className={className} aria-hidden="true" />;
+}
+
+/**
+ * A still frame of the engine, for the shape and preset cards.
+ *
+ * A card that draws its own approximation of a dot is a second implementation of the
+ * thing it is advertising, and it drifts the moment the glyph code changes — which is
+ * how a "pentagon" card ends up showing a pentagon the component no longer renders. So
+ * this calls the engine's own `field()`, once, at a fixed phase, and emits the same
+ * markup the live SVG renderer produces. There is no second drawing code here to fall
+ * out of sync; the only decision this component makes is the phase to show.
+ *
+ * `phase` is not 0 on purpose. A traversal lives in the *difference* between cells, and
+ * at t=0 most cells sit at the same level, so the card shows a uniform blob and says
+ * nothing. A little way into the cycle the wavefront is visible, which is the thing the
+ * card exists to show.
+ */
+export function Still({
+  options,
+  size,
+  phase = 0.35,
+  className,
+}: {
+  options: DotMatrixOptions;
+  /** the card's edge length in px; the field is laid out against this, not scaled */
+  size: number;
+  phase?: number;
+  className?: string;
+}) {
+  const markup = useMemo(() => {
+    const o = resolveOptions(options);
+    return field(o, phase)
+      .map(
+        (d) =>
+          `<path d="${d.d}" transform="translate(${d.x.toFixed(2)} ${d.y.toFixed(2)}) scale(${d.r.toFixed(3)})"/>`,
+      )
+      .join("");
+    // every option participates. A card that ignored `dot` would show a square while the
+    // field below it shows a star — the exact confusion these cards exist to remove.
+  }, [options, phase]);
+
+  return (
+    <svg
+      className={className}
+      viewBox={`${-size / 2} ${-size / 2} ${size} ${size}`}
+      width={size}
+      height={size}
+      fill="currentColor"
+      aria-hidden="true"
+      dangerouslySetInnerHTML={{ __html: markup }}
+    />
+  );
+}
+
+/**
+ * A live, looping preview for the motion cards.
+ *
+ * The presets are the one control whose value cannot be read off a number: `spiral` and
+ * `ring` differ in a way a label cannot convey and a still frame only half-conveys. So
+ * these run the real engine rather than an animation of somebody's idea of it.
+ *
+ * Each card is paused unless it is hovered or focused, and none of them animate until
+ * the pointer reaches them. Twelve simultaneously-running fields is a page that melts
+ * the laptop it is trying to sell a component for; the trade is that the card you are
+ * looking at is the one that moves.
+ */
+export function LiveCard({
+  options,
+  size,
+  className,
+}: {
+  options: DotMatrixOptions;
+  size: number;
+  className?: string;
+}) {
+  const [running, setRunning] = useState(false);
+  return (
+    <div
+      className={className}
+      onPointerEnter={() => setRunning(true)}
+      onPointerLeave={() => setRunning(false)}
+      onFocus={() => setRunning(true)}
+      onBlur={() => setRunning(false)}
+    >
+      <Matrix {...options} size={size} playing={running} />
+    </div>
+  );
 }

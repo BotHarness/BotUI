@@ -20,9 +20,7 @@
   "group_shape": "shape · 形状",
   "group_size": "size · 尺寸",
   "group_motion": "motion · 动效",
-  "ctl_silhouette": "silhouette",
   "ctl_sides": "sides",
-  "ctl_glyph": "glyph preset",
   "ctl_radius": "corner radius",
   "ctl_aspect": "aspect",
   "ctl_size": "size",
@@ -31,7 +29,6 @@
   "ctl_dot_cell": "dot / cell",
   "ctl_gap_x": "gap x",
   "ctl_gap_y": "gap y",
-  "ctl_preset": "preset",
   "ctl_speed": "speed",
   "ctl_stagger": "stagger",
   "ctl_softness": "softness",
@@ -100,5 +97,11 @@
   "sil_hex": "hexagon",
   "sil_ring": "ring",
   "sil_cross": "cross",
-  "readout_speed": "speed"
+  "readout_speed": "speed",
+  "group_dot": "Dot shape",
+  "group_geometry": "Dot detail",
+  "scope_field_shape": "Changes the outline of the whole field",
+  "scope_dot_shape": "Changes each individual dot",
+  "scope_motion": "Hover or focus a card to play it",
+  "group_timing": "Timing"
 }

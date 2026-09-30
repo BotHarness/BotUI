@@ -514,3 +514,233 @@ footer {
 .playground-field .reset:hover {
   color: var(--ink);
 }
+
+/* ── the reshaped playground ──────────────────────────────────────────────────
+   Two columns: the field and the things that change what it IS on the left, the
+   things that tune it on the right. The split is by intent, not by control type —
+   "what shape is this" and "how fast does it move" are different questions, and
+   putting a slider for one next to a slider for the other is what made the old
+   single column hard to scan. */
+.playground {
+  grid-template-columns: minmax(0, 1fr) 320px;
+}
+
+.playground-main,
+.playground-side {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+}
+
+/* The stage's own controls sit ON the field rather than beside it. Rows, columns and
+   dot size are what you reach for while looking at the field — how many dots, how fat
+   — so they belong to the thing they change. `z-index` is load-bearing: the engine
+   paints its SVG into this box, and an overlay without it sits UNDER the dots. */
+.playground-stage {
+  position: sticky;
+  top: 20px;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 20px;
+  padding: 16px;
+  min-height: 0;
+}
+
+.stage-controls {
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 168px;
+}
+
+.stage-controls .playground-field[data-compact] {
+  /* the label sits beside the track: the vertical space here is expensive */
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.stage-controls .playground-field[data-compact] > span {
+  white-space: nowrap;
+  /* without this the uppercase label and the mono value touch: "DOT / CELL55%" */
+  gap: 10px;
+}
+
+.stage-controls .playground-field[data-compact] input[type="range"] {
+  flex: 1;
+  min-width: 0;
+}
+
+/* Rows and columns as buttons: for a small integer, "one more" beats hunting for a
+   thumb. The two buttons are the hit targets, so the box itself is not focusable. */
+.stepper {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 12px;
+}
+
+.stepper-label {
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.stepper-controls {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--card);
+  padding: 1px;
+}
+
+.stepper-controls button {
+  border: 0;
+  background: none;
+  color: var(--ink);
+  cursor: pointer;
+  font: inherit;
+  line-height: 1;
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+}
+
+.stepper-controls button:hover:not(:disabled) {
+  background: var(--line);
+}
+
+.stepper-controls button:disabled {
+  color: var(--line);
+  cursor: not-allowed;
+}
+
+.stepper-controls output {
+  min-width: 22px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── card groups ────────────────────────────────────────────────────────────
+   A radio group, so the browser supplies "3 of 14", arrow-key movement and a single
+   tab stop — none of which a grid of buttons gets for free. */
+.card-group {
+  border: 0;
+  border-top: 1px solid var(--line);
+  margin: 0;
+  padding: 12px 0 0;
+  min-width: 0;
+}
+
+.card-group:first-of-type {
+  border-top: 0;
+  padding-top: 0;
+}
+
+.card-group legend {
+  color: var(--muted);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  padding: 0 6px 0 0;
+}
+
+/* The scope line is the whole point of splitting shape into two groups: it says, in
+   the same place on every group, whether the cards change the field or each dot. */
+.card-scope {
+  margin: 0 0 8px;
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.card-grid {
+  display: grid;
+  grid-template-columns: repeat(var(--cards, 4), minmax(0, 1fr));
+  gap: 6px;
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 6px 2px 4px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--card);
+  cursor: pointer;
+  min-width: 0;
+}
+
+.card:hover {
+  border-color: var(--muted);
+}
+
+.card[data-selected] {
+  border-color: var(--accent);
+  box-shadow: inset 0 0 0 1px var(--accent);
+}
+
+/* The radio itself is the accessible control and must stay focusable and announced;
+   it is hidden visually because the card around it shows the selection. */
+.card input[type="radio"] {
+  position: absolute;
+  opacity: 0;
+  width: 1px;
+  height: 1px;
+}
+
+.card:has(input:focus-visible) {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.card-preview {
+  display: grid;
+  place-items: center;
+  color: var(--ink);
+  /* fixed, not intrinsic: a row of cards where the label wraps to two lines for one
+     value and one line for another leaves the pictures on different baselines */
+  height: 52px;
+}
+
+.card-label {
+  font-size: 10px;
+  line-height: 1.25;
+  color: var(--muted);
+  text-align: center;
+  /* two lines max: "Rounded square" fits, a longer name truncates rather than
+     pushing its neighbours out of alignment */
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  min-height: 2.5em;
+}
+
+.card[data-selected] .card-label {
+  color: var(--ink);
+}
+
+@media (max-width: 860px) {
+  .playground {
+    grid-template-columns: 1fr;
+  }
+
+  .playground-stage {
+    position: static;
+    grid-template-columns: 1fr;
+  }
+
+  /* the cards are the primary control on a narrow screen, so they come before the
+     tuning sliders rather than after them */
+  .card-grid {
+    grid-template-columns: repeat(auto-fill, minmax(72px, 1fr));
+  }
+}

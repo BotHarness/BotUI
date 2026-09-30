@@ -51,13 +51,17 @@ afterEach(() => {
 describe("client locale resolution", () => {
   it("keeps the Chinese page's controls in Chinese", () => {
     const text = renderAt("/zh/");
-    expect(text).toContain("整体轮廓 silhouette");
+    // the shape controls are cards now, so the discriminators are the card labels and
+    // each group's scope line — copy that exists in only one of the two catalogues
+    expect(text).toContain("改变整个点阵的外轮廓");
+    expect(text).toContain("改变每一个点本身");
     expect(text).toContain("圆形");
   });
 
   it("keeps the English page's controls in English", () => {
     const text = renderAt("/");
-    expect(text).toContain("silhouette");
+    expect(text).toContain("Changes the outline of the whole field");
+    expect(text).toContain("Changes each individual dot");
     expect(text).toContain("circle");
     // "silhouette" is a substring of the Chinese label, so it cannot prove the page
     // stayed English on its own.

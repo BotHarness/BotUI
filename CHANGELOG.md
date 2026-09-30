@@ -13,6 +13,10 @@ All notable changes to BotUI are recorded here. The format follows
 
 ### Changed
 
+- **The playground's shape and motion controls are pictures now, not sliders.** `sides` and `silhouette` sat in one list under one "shape" heading, so a reader could not tell which moved the whole field and which moved each dot; the silhouette is now a card group whose cards change the field's outline and a second group whose cards change the dot inside it, each stating its scope in the same place. Presets were a `<select>` of bare names, which cannot convey that `spiral` and `ring` differ; they are cards that run the engine, and they animate once the pointer or focus reaches them rather than twelve at once.
+- Every card draws the engine's own output — `field()` for a still, `cellsFor()` for a silhouette, the live field for a motion. A card that drew its own approximation of a dot would be a second implementation of the thing it advertises, and would drift the moment the glyph code changed. The phase is deliberately not 0: a traversal lives in the difference between cells, and at t=0 they are all at rest, so a still card showed a uniform blob.
+- Rows and columns are steppers on the stage rather than sliders in the side column, and `dot/cell` moved onto the stage too: they are what you reach for while looking at the field. Overall `size` moved to last, because it decides how much room the field takes rather than what it looks like.
+
 - `check-registry.mjs` now fails the build when a published package has no README, no
   `repository` pointing at this repo, no homepage or no bugs URL.
 
