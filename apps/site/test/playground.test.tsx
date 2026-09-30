@@ -10,6 +10,7 @@ import { afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { Playground } from "../src/components/Playground.js";
+import { DEFAULTS, cellsFor } from "@botharness/botui-core";
 
 // React 19's act() refuses to run unless the environment opts in. Without this every
 // render is a no-op with a warning, and the assertions fail for a reason that has
@@ -43,8 +44,19 @@ const field = () =>
     o: p.getAttribute("fill-opacity"),
   }));
 
+/** a slider inside a specific column, so the stage's own controls cannot be mistaken
+ *  for the side column's identically-named ones */
+const sliderIn = (scope: string, label: RegExp) => {
+  const field = [...container.querySelectorAll(`${scope} .playground-field`)].find((row) =>
+    label.test(row.querySelector("span")?.textContent ?? ""),
+  );
+  const input = field?.querySelector("input[type=range]") as HTMLInputElement | null;
+  if (!input) throw new Error(`no slider matching ${label} in ${scope}`);
+  return input;
+};
+
 const slider = (label: RegExp) => {
-  const field = [...container.querySelectorAll(".playground-field")].find((row) =>
+  const field = [...container.querySelectorAll(".playground-side .playground-field")].find((row) =>
     label.test(row.querySelector("span")?.textContent ?? ""),
   );
   const input = field?.querySelector("input[type=range]") as HTMLInputElement | null;
@@ -73,10 +85,44 @@ const drag = (input: HTMLInputElement, value: number) => {
   });
 };
 
-const choose = (select: HTMLSelectElement, value: string) => {
+/** the card in a group whose label matches, by its radio value */
+const card = (groupLabel: RegExp, value: string) => {
+  const group = [...container.querySelectorAll(".card-group")].find((g) =>
+    groupLabel.test(g.querySelector("legend")?.textContent ?? ""),
+  );
+  const input = group?.querySelector(
+    `input[type=radio][value="${value}"]`,
+  ) as HTMLInputElement | null;
+  if (!input) throw new Error(`no card ${value} in ${groupLabel}`);
+  return input;
+};
+
+const pick = (input: HTMLInputElement) => {
   act(() => {
-    setNativeValue(select, value);
-    select.dispatchEvent(new window.Event("change", { bubbles: true }));
+    input.click();
+  });
+};
+
+/** a +/- stepper by its label, as the three controls it actually is */
+const stepper = (label: RegExp) => {
+  const row = [...container.querySelectorAll(".stepper")].find((r) =>
+    label.test(r.querySelector(".stepper-label")?.textContent ?? ""),
+  );
+  if (!row) throw new Error(`no stepper matching ${label}`);
+  const [dec, inc] = row.querySelectorAll("button");
+  return {
+    dec: dec as HTMLButtonElement,
+    inc: inc as HTMLButtonElement,
+    value: row.querySelector("output") as HTMLOutputElement,
+  };
+};
+
+const step = (label: RegExp, by: 1 | -1) => {
+  // re-query each time: React replaces these nodes on each render, so a reference
+  // captured before the first click is detached from the document by the second
+  const s = stepper(label);
+  act(() => {
+    (by === 1 ? s.inc : s.dec).click();
   });
 };
 
@@ -98,15 +144,86 @@ describe("the playground controls", () => {
     expect(field().length).toBe(before.length);
   });
 
-  it("the silhouette slider changes which cells exist", () => {
-    const input = slider(/silhouette/i);
-    drag(input, 0); // square keeps every cell
+  it("a silhouette card changes which cells exist", () => {
+    // square keeps every cell; cross drops most of them. The control is a card now,
+    // but the claim it has to support is unchanged — it changes the FIELD, not a label.
+    pick(card(/shape|形状/i, "square"));
     const square = field().length;
-    drag(input, 5); // cross drops most of them
-    const cross = field().length;
-    expect(square).toBe(49);
-    expect(cross).toBeLessThan(square);
-    expect(readout()).toContain("cross");
+    pick(card(/shape|形状/i, "ring"));
+    const ring = field().length;
+    expect(square, "square keeps every cell of a 7×7 lattice").toBe(49);
+    expect(ring, "ring keeps only its outline").toBeLessThan(square);
+    expect(readout()).toContain("ring");
+  });
+
+  it("a card group is one tab stop with one selection, not a grid of buttons", () => {
+    // A grid of <button>s would make every card a tab stop and would leave the group
+    // with no announced position ("3 of 14"), and arrow keys would do nothing. Radios
+    // inside a fieldset give all three for free, which is why the cards are radios.
+    const groups = container.querySelectorAll(".card-group");
+    expect(groups.length).toBeGreaterThanOrEqual(3);
+    for (const group of groups) {
+      const inputs = group.querySelectorAll("input[type=radio]");
+      expect(inputs.length, "every option is a card").toBeGreaterThan(1);
+      // a radio group shares a name, so the browser enforces one selection for us
+      const names = new Set([...inputs].map((i) => (i as HTMLInputElement).name));
+      expect(names.size, "one name per group, so only one card can be checked").toBe(1);
+      expect(
+        [...inputs].filter((i) => (i as HTMLInputElement).checked).length,
+        "exactly one card is selected",
+      ).toBe(1);
+    }
+  });
+
+  it("every card says what it changes, so the two shape groups are distinguishable", () => {
+    // The engine has two shapes — the field's outline and the dot inside it — and one
+    // slider list labelled only "shape" left a reader guessing which was which. Each
+    // group states its scope in the same place, so the distinction is readable before
+    // anything is clicked.
+    const scopes = [...container.querySelectorAll(".card-group .card-scope")].map(
+      (s) => s.textContent ?? "",
+    );
+    expect(scopes.length).toBeGreaterThanOrEqual(3);
+    expect(new Set(scopes).size, "each group states a different scope").toBe(scopes.length);
+    for (const scope of scopes) expect(scope.length).toBeGreaterThan(0);
+  });
+
+  it("the selected card is the shape actually rendered", () => {
+    // A hardcoded fallback here (`options.silhouette ?? "square"`) disagreed with the
+    // engine's own default of `circle`, so on first paint the page highlighted `square`
+    // while drawing a circle — 29 cells of circle under a card marked square. The old
+    // slider hid it by indexing into the key list; a card shows its selection, so it
+    // could not. Asserted against the ENGINE's default, not a literal, so the test
+    // cannot drift the same way the code did.
+    const checked = [...container.querySelectorAll(".card-group input:checked")].map(
+      (r) => (r as HTMLInputElement).value,
+    );
+    expect(checked, "one card selected per group, and each is the engine's own default").toEqual([
+      DEFAULTS.silhouette,
+      DEFAULTS.dot,
+      DEFAULTS.preset,
+    ]);
+    const drawn = field().length;
+    expect(drawn, "the rendered field matches the selected silhouette").toBe(
+      cellsFor(DEFAULTS.cols, DEFAULTS.rows, DEFAULTS.silhouette).length,
+    );
+  });
+
+  it("a dot card changes the glyph, not the set of cells", () => {
+    // the two card groups act on different things, which is the whole reason they are
+    // two groups: a dot must not change which cells exist, a silhouette must not change
+    // the dot's path. Before the split both were sliders in one list labelled only
+    // "shape", and nothing on the page said which was which.
+    const cellsBefore = field().length;
+    const pathBefore = field()[0]?.d;
+    pick(card(/dot shape|点的形状/i, "triangle"));
+    expect(field().length, "a dot shape must not add or remove cells").toBe(cellsBefore);
+    expect(field()[0]?.d, "a dot card must change the glyph path").not.toBe(pathBefore);
+    expect((field()[0]?.d!.match(/[ML]/g) ?? []).length, "a triangle has three vertices").toBe(3);
+
+    const pathAfterDot = field()[0]?.d;
+    pick(card(/shape|形状/i, "diamond"));
+    expect(field()[0]?.d, "a silhouette must not change the glyph").toBe(pathAfterDot);
   });
 
   it("the dot sides slider changes the glyph path, not just a label", () => {
@@ -135,26 +252,33 @@ describe("the playground controls", () => {
     expect(field()[0]?.t).toBe(container.querySelectorAll("path")[0]?.getAttribute("transform"));
   });
 
-  it("the dot preset select can reach a shape sides cannot", () => {
+  it("a dot card can reach a shape sides cannot", () => {
     // a star is a NOTCH between the points, so no value of `sides` produces one
-    const select = [...container.querySelectorAll(".playground-field")]
-      .find((row) => /glyph/i.test(row.querySelector("span")?.textContent ?? ""))
-      ?.querySelector("select") as HTMLSelectElement;
-    expect(select).toBeTruthy();
-    choose(select, "star5");
+    pick(card(/dot shape|点的形状/i, "star5"));
     const star = field()[0]?.d;
     expect(star).toBeTruthy();
     // ten vertices: five points and five notches
     expect((star!.match(/[ML]/g) ?? []).length).toBe(10);
   });
 
-  it("grid and gap sliders change the geometry", () => {
-    const cols = slider(/cols/i);
+  it("the column stepper changes the geometry", () => {
     const before = field().length;
-    drag(cols, 3);
-    expect(field().length, "a 3-wide circle keeps fewer cells than a 7-wide one").toBeLessThan(
+    for (let i = 0; i < 4; i++) step(/^cols$|列/i, -1);
+    expect(field().length, "a 3-wide square keeps fewer cells than a 7-wide one").toBeLessThan(
       before,
     );
+  });
+
+  it("a stepper stops at its bounds instead of reporting a value it cannot set", () => {
+    const s7 = stepper(/^cols$|列/i);
+    // walk to the top, then keep going: the button disables, so the value cannot run
+    // past max and leave the readout claiming a grid the field does not have
+    for (let i = 0; i < 40; i++) step(/^cols$|列/i, 1);
+    expect(Number(s7.value.textContent)).toBe(16);
+    expect(s7.inc.disabled, "at the maximum the increment must be disabled").toBe(true);
+    for (let i = 0; i < 40; i++) step(/^cols$|列/i, -1);
+    expect(Number(s7.value.textContent)).toBe(1);
+    expect(s7.dec.disabled, "at the minimum the decrement must be disabled").toBe(true);
   });
 
   it("only the tighter axis resizes the dot; the other just redistributes air", () => {
@@ -162,7 +286,7 @@ describe("the playground controls", () => {
     // That asymmetry is deliberate and load-bearing — a dot that grew to fill the slack
     // on the roomy axis would be wider than it is tall — and it is exactly the kind of
     // thing a test that only checked "the number changed" would miss.
-    drag(slider(/cols/i), 3);
+    for (let i = 0; i < 4; i++) step(/^cols$|列/i, -1);
     // an SVG transform reads `translate(x y) scale(s)` — space separated, not comma
     const transform = /translate\((-?[\d.]+)\s+(-?[\d.]+)\) scale\((-?[\d.]+)\)/;
     const read = (dot: { t?: string | null }) => transform.exec(dot.t ?? "");
@@ -170,30 +294,30 @@ describe("the playground controls", () => {
     const axisX = () => [...new Set(field().map((dot) => read(dot)?.[1]))];
     const axisY = () => [...new Set(field().map((dot) => read(dot)?.[2]))];
 
-    const baseScale = scale();
-    const baseX = axisX();
-    const baseY = axisY();
-
-    // the roomy axis: positions move, the dot does not
+    // the roomy axis (x): positions move, the dot does not. Widening first makes the
+    // comparison a change rather than a drag to a value already in effect.
+    drag(slider(/gap x/i), 100);
+    const xWide = axisX();
+    const scaleAtWideX = scale();
     drag(slider(/gap x/i), 0);
-    expect(axisX(), "gap x must move the dots along x").not.toEqual(baseX);
-    expect(scale(), "gap x must NOT resize the dot — the rows are tighter").toBe(baseScale);
-    expect(axisY(), "gap x must not move the dots along y").toEqual(baseY);
+    expect(axisX(), "gap x must move the dots along x").not.toEqual(xWide);
+    expect(scale(), "gap x must NOT resize the dot — the rows are tighter").toBe(scaleAtWideX);
 
-    // the tighter axis: everything moves
-    const scaleBeforeTight = scale();
-    const yBeforeTight = axisY();
+    // the tighter axis (y): everything moves. Widening first, for the same reason.
+    drag(slider(/gap y/i), 100);
+    const yWide = axisY();
+    const scaleAtWideY = scale();
     drag(slider(/gap y/i), 0);
-    expect(axisY(), "gap y must move the dots along y").not.toEqual(yBeforeTight);
-    expect(scale(), "gap y DOES resize the dot — it is the tighter axis").not.toBe(
-      scaleBeforeTight,
-    );
+    expect(axisY(), "gap y must move the dots along y").not.toEqual(yWide);
+    expect(scale(), "gap y DOES resize the dot — it is the tighter axis").not.toBe(scaleAtWideY);
   });
 
   it("the dot/cell slider still lands the field exactly on the box at 200%", () => {
     // the invariant the whole size algebra exists for, exercised through the UI
-    const input = slider(/dot \/ cell/i);
+    // the compact one ON the stage, not any other field
+    const input = sliderIn(".stage-controls", /dot \/ cell/i);
     drag(input, 200);
+    expect(Number(input.max), "dot/cell must still reach 200%").toBe(200);
     expect(readout()).toContain("dot / cell   200%");
     // 200% of the cell with a 0.45 gap is past touching, so the pitch share is > 100
     const share = Number(/dot \/ pitch\s+(\d+)%/.exec(readout())?.[1]);
@@ -201,11 +325,8 @@ describe("the playground controls", () => {
   });
 
   it("refuses the CSS renderer for a motion it cannot express, and says why", () => {
-    const preset = [...container.querySelectorAll(".playground-field")]
-      .find((row) => /^preset/i.test(row.querySelector("span")?.textContent ?? ""))
-      ?.querySelector("select") as HTMLSelectElement;
     const checkbox = container.querySelector(".playground-check input") as HTMLInputElement;
-    choose(preset, "columns");
+    pick(card(/motion|动效/i, "columns"));
     expect(checkbox.disabled, "a per-dot delay cannot move a highlight").toBe(true);
     expect(container.querySelector(".playground-note")?.textContent).toMatch(/refuses it/);
   });
@@ -405,18 +526,17 @@ describe("a dial that follows a preset must be able to return to it", () => {
   });
 
   it("changing the preset moves the dial again once it is back to following", () => {
-    const preset = [...container.querySelectorAll(".playground-field")]
-      .find((row) => /^preset/i.test(row.querySelector("span")?.textContent ?? ""))
-      ?.querySelector("select") as HTMLSelectElement;
-
     // override, switch preset — the dial must NOT follow, because it is overridden
     drag(staggerRow().querySelector("input") as HTMLInputElement, 20);
-    choose(preset, "ring");
+    pick(card(/motion|动效/i, "ring"));
     expect(Number((staggerRow().querySelector("input") as HTMLInputElement).value)).toBe(20);
 
     // back to following, and now the preset does move it: ring's spread is 0.34
     act(() => (staggerRow().querySelector(".reset") as HTMLButtonElement).click());
-    choose(preset, "ring");
+    // back to spiral, then to ring again, so this is a CHANGE and not a repeat of
+    // the click the previous assertion already made
+    pick(card(/motion|动效/i, "spiral"));
+    pick(card(/motion|动效/i, "ring"));
     expect(Number((staggerRow().querySelector("input") as HTMLInputElement).value)).toBe(34);
     expect(staggerRow().querySelector("em")?.textContent).toMatch(/34%/);
   });

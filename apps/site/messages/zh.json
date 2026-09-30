@@ -20,9 +20,7 @@
   "group_shape": "形状 shape",
   "group_size": "尺寸 size",
   "group_motion": "动效 motion",
-  "ctl_silhouette": "整体轮廓 silhouette",
   "ctl_sides": "点边数 sides",
-  "ctl_glyph": "点预设 glyph",
   "ctl_radius": "圆角 radius",
   "ctl_aspect": "拉伸 aspect",
   "ctl_size": "size",
@@ -31,7 +29,6 @@
   "ctl_dot_cell": "点占格 dot/cell",
   "ctl_gap_x": "列间距 gap x",
   "ctl_gap_y": "行间距 gap y",
-  "ctl_preset": "preset",
   "ctl_speed": "速度 speed",
   "ctl_stagger": "错峰 stagger",
   "ctl_softness": "波宽 softness",
@@ -100,5 +97,11 @@
   "sil_hex": "六边",
   "sil_ring": "圆环",
   "sil_cross": "十字",
-  "readout_speed": "速度"
+  "readout_speed": "速度",
+  "group_dot": "点的形状",
+  "group_geometry": "点的细节",
+  "scope_field_shape": "改变整个点阵的外轮廓",
+  "scope_dot_shape": "改变每一个点本身",
+  "scope_motion": "悬停或聚焦卡片即可播放",
+  "group_timing": "节奏"
 }

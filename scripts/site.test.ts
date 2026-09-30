@@ -120,9 +120,17 @@ describe("the site source", () => {
     // `dot / cell` and `dot / pitch` are different numbers and only one means
     // anything to the eye: 100% of the pitch is two dots touching
     const playground = await readFile(join(src, "components/Playground.tsx"), "utf8");
-    expect(playground).toContain("dot / pitch");
-    expect(playground).toContain("two dots touching");
+    // the copy moved into the message catalogues when the page became bilingual, so
+    // asserting the literal in the component would assert a string that is no longer
+    // there. What has to hold is that the readout renders BOTH vocabularies and that
+    // it computes the touching threshold rather than hard-coding it.
+    expect(playground).toContain("readout_dot_pitch");
+    expect(playground).toContain("readout_touching_hint");
     expect(playground).toContain("touchingDotSize");
+
+    const en = JSON.parse(await readFile(join(src, "../messages/en.json"), "utf8"));
+    expect(en.readout_dot_pitch).toBe("dot / pitch");
+    expect(en.readout_touching_hint).toMatch(/two dots touching/);
   });
 
   it("the registry list reads the registry rather than restating it", async () => {

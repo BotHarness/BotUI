@@ -1,5 +1,9 @@
 import { useMemo, useState } from "react";
+import { LiveCard, Matrix, Still } from "./Matrix.js";
+import { CardGroup, SilhouetteCard } from "./Cards.js";
+import { m, glyphLabel, polygonName, silhouetteLabel, taskLabel } from "../i18n.js";
 import {
+  DEFAULTS,
   DOT_SHAPES,
   DOT_SHAPE_KEYS,
   GLYPH_DEFAULTS,
@@ -17,46 +21,11 @@ import {
   type PresetName,
   type Silhouette,
 } from "@botharness/botui-core";
-import { m, glyphLabel, polygonName, silhouetteLabel, taskLabel } from "../i18n.js";
-import { Matrix } from "./Matrix";
 
-/**
- * The playground: every layer the component exposes, on one field, all of it draggable.
- *
- * The two shapes are sliders rather than dropdowns on purpose. A dot is a POLYGON plus
- * two corner radii — `sides: 3` is a triangle, `sides: 6` a hexagon — so the honest
- * control is the number, and dragging it is how you find out that a 7-gon is a
- * heptagon. The named glyphs are presets over that number, so they stay available as a
- * second control for the shapes `sides` cannot reach: a star is a notch between the
- * points, and a bar is an aspect ratio.
- *
- * The readout matters as much as the sliders. `dot / cell` and `dot / pitch` are
- * different numbers and only one of them means anything to the eye: 100% of the PITCH
- * is two dots touching, and that point moves when the gap changes.
- */
-export function Playground() {
-  const [options, setOptions] = useState<DotMatrixOptions>({
-    size: 150,
-    cols: 7,
-    rows: 7,
-    silhouette: "circle",
-    dot: "square",
-    spec: { ...DOT_SHAPES.square.spec },
-    dotSize: 0.55,
-    gapX: 0.45,
-    gapY: 0.45,
-    preset: "spiral",
-    speed: 1,
-    grow: 0.5,
-    softness: 0,
-    stagger: null,
-    renderer: "svg",
-    // The component's own default floor is 0.16, which is deliberately almost-dark: an
-    // indicator should not shout. On a dark page at 150px that reads as an EMPTY box,
-    // though, and a demo nobody can see is not a demo. A demo choice, not a component
-    // change — the floor slider below moves it.
-    floor: 0.32,
-  });
+const CARD = 44;
+
+export function Playground({ initial }: { initial?: Partial<DotMatrixOptions> }) {
+  const [options, setOptions] = useState<DotMatrixOptions>({ ...initial });
   const [cssRenderer, setCssRenderer] = useState(false);
 
   const set = (patch: Partial<DotMatrixOptions>) => setOptions((o) => ({ ...o, ...patch }));
@@ -74,34 +43,172 @@ export function Playground() {
 
   // a motion the CSS renderer cannot express has to be refused, not approximated — the
   // page says so instead of showing a different animation under the same name
-  // the engine's own rule, not a re-statement of it: a caller that checks whether the
-  // preset EXISTS instead of whether the renderer can EXPRESS it leaves the checkbox
-  // enabled for a motion that has no CSS form
   const cssAvailable = cssRenderable(options.preset);
-  const silhouetteIndex = Math.max(0, SILHOUETTE_KEYS.indexOf(options.silhouette ?? "square"));
   const sides = options.spec?.sides ?? GLYPH_DEFAULTS.sides;
+
+  // the dot cards show ONE field so the only difference between them is the dot: a
+  // shared 1×1 field makes "which dot?" answerable by comparison, and a per-card field
+  // would hide a wrong dot behind an unusual arrangement
+  const dotBase: DotMatrixOptions = { silhouette: "circle", size: CARD };
 
   return (
     <div className="playground">
-      <div className="playground-stage">
-        <Matrix
-          {...options}
-          renderer={cssRenderer ? "css" : "svg"}
-          key={`${options.preset}-${options.silhouette}-${options.cols}x${options.rows}-${options.dot}`}
+      <div className="playground-main">
+        {/* The stage carries its own controls. Rows, columns and dot size are the three
+            things you reach for while looking AT the field — how many dots there are and
+            how fat they look — so putting them beside the field means the eye never has
+            to leave it. The field is what they change; that is the whole argument. */}
+        <div className="playground-stage">
+          <div className="stage-controls">
+            <Stepper
+              label={m.ctl_cols()}
+              value={options.cols ?? 7}
+              min={1}
+              max={16}
+              onChange={(cols) => set({ cols })}
+            />
+            <Stepper
+              label={m.ctl_rows()}
+              value={options.rows ?? 7}
+              min={1}
+              max={16}
+              onChange={(rows) => set({ rows })}
+            />
+            {/* dot/cell leads the size group because it is the ratio that decides whether
+                a field reads as dots, as pixels, or as a solid block. Overall size only
+                changes how much room it takes. */}
+            {/* NOT a PercentSlider: dot/cell is measured in hundredths-of-a-cell and
+                legitimately exceeds 100 (above 1 the dots touch, which is the point of
+                the range). PercentSlider means "a fraction of 1" and clamps to it, so a
+                dot/cell of 200 arrived as 100 — the same raw-fraction-against-a-
+                hundredths-track defect the other three sliders had. */}
+            <Slider
+              label={m.ctl_dot_cell()}
+              value={Math.round((options.dotSize ?? 0.55) * 100)}
+              min={5}
+              max={200}
+              step={1}
+              display={`${Math.round((options.dotSize ?? 0.55) * 100)}%`}
+              compact
+              onChange={(v) => set({ dotSize: v / 100 })}
+            />
+          </div>
+          <Matrix
+            {...options}
+            renderer={cssRenderer ? "css" : "svg"}
+            key={`${options.preset}-${options.silhouette}-${options.cols}x${options.rows}-${options.dot}`}
+          />
+        </div>
+
+        {/* Shape, as pictures. Two groups because the engine has two shapes: the field's
+            outline and the dot inside it. A single slider list called them both "shape"
+            and left the reader to guess which was which. */}
+        <CardGroup
+          label={m.group_shape()}
+          scope={m.scope_field_shape()}
+          value={options.silhouette ?? DEFAULTS.silhouette}
+          onChange={(silhouette) => set({ silhouette: silhouette as Silhouette })}
+          options={SILHOUETTE_KEYS.map((key) => ({ value: key, label: silhouetteLabel(key) }))}
+          columns={6}
+          renderPreview={(value) => <SilhouetteCard value={value as Silhouette} size={CARD} />}
+        />
+
+        <CardGroup
+          label={m.group_dot()}
+          scope={m.scope_dot_shape()}
+          value={options.dot ?? DEFAULTS.dot}
+          onChange={(dot) =>
+            set({
+              dot: dot as DotShape,
+              spec: { ...DOT_SHAPES[dot as keyof typeof DOT_SHAPES].spec },
+            })
+          }
+          options={DOT_SHAPE_KEYS.map((key) => ({ value: key, label: glyphLabel(key) }))}
+          columns={7}
+          renderPreview={(value) => (
+            <Still
+              options={{
+                ...dotBase,
+                cols: 1,
+                rows: 1,
+                dot: value as DotShape,
+                spec: { ...DOT_SHAPES[value as keyof typeof DOT_SHAPES].spec },
+                dotSize: 1.4,
+                gapX: 0,
+                gapY: 0,
+              }}
+              size={CARD}
+              phase={0}
+            />
+          )}
         />
       </div>
 
-      <div className="playground-controls">
-        <Group label={m.group_shape()}>
-          <Slider
-            label={m.ctl_silhouette()}
-            value={silhouetteIndex}
-            min={0}
-            max={SILHOUETTE_KEYS.length - 1}
-            step={1}
-            display={silhouetteLabel(options.silhouette ?? "square")}
-            onChange={(i) => set({ silhouette: SILHOUETTE_KEYS[i] as Silhouette })}
+      <div className="playground-side">
+        {/* Motion, as pictures too. A preset's name is the least informative thing about
+            it: `spiral` and `ring` differ in a way no label conveys, and a still frame
+            only half-conveys it. These run the engine, and only once you reach them —
+            twelve fields animating at once is a page that melts the laptop it is trying
+            to sell a component for. */}
+        <CardGroup
+          label={m.group_motion()}
+          scope={m.scope_motion()}
+          value={options.preset ?? DEFAULTS.preset}
+          onChange={(preset) => set({ preset: preset as PresetName })}
+          options={PRESET_KEYS.map((key) => ({ value: key, label: taskLabel(key) }))}
+          columns={3}
+          renderPreview={(value) => (
+            <LiveCard
+              options={{
+                cols: 5,
+                rows: 5,
+                silhouette: "square",
+                dot: "circle",
+                size: 56,
+                preset: value as PresetName,
+              }}
+              size={56}
+            />
+          )}
+        />
+
+        <Group label={m.group_timing()}>
+          {/* speed and stagger stay sliders: both are continuous, and a still frame
+              cannot show a rate at all — the label is the honest representation */}
+          <PercentSlider
+            label={m.ctl_speed()}
+            fraction={options.speed ?? 1}
+            min={5}
+            max={300}
+            display={m.value_speed({ value: (options.speed ?? 1).toFixed(2) })}
+            onChange={(speed) => set({ speed })}
           />
+          {/* The label states the preset's OWN number rather than the word "preset":
+              the thumb is sitting at 95% and a label reading only "preset" tells you
+              nothing about where it is. And once you drag, `onReset` is the only way
+              back to following the preset. */}
+          <PercentSlider
+            label={m.ctl_stagger()}
+            fraction={options.stagger ?? PRESETS[options.preset ?? DEFAULTS.preset]!.spread}
+            max={200}
+            display={
+              options.stagger == null
+                ? m.value_preset({
+                    value: percentOf(
+                      options.stagger ?? PRESETS[options.preset ?? DEFAULTS.preset]!.spread,
+                    ),
+                  })
+                : percentOf(options.stagger)
+            }
+            dirty={options.stagger != null}
+            onReset={() => set({ stagger: null })}
+            onChange={(stagger) => set({ stagger })}
+          />
+        </Group>
+
+        <Group label={m.group_geometry()}>
+          {/* the polygon is a slider because it is a NUMBER: the cards show named glyphs,
+              and `sides` is what reaches the ones with no name — a 7-gon, a 9-gon */}
           <Slider
             label={m.ctl_sides()}
             value={sides}
@@ -110,20 +217,6 @@ export function Playground() {
             step={1}
             display={polygonName(sides)}
             onChange={(n) => setSpec({ sides: n })}
-          />
-          <Select
-            label={m.ctl_glyph()}
-            value={options.dot}
-            onChange={(dot) =>
-              set({
-                dot: dot as DotShape,
-                spec: { ...DOT_SHAPES[dot as keyof typeof DOT_SHAPES].spec },
-              })
-            }
-            options={DOT_SHAPE_KEYS.map((key) => ({
-              value: key,
-              label: glyphLabel(key),
-            }))}
           />
           {/* the top of this travel is the polygon's OWN inradius, so dragging it
               all the way always gives a circle — for a triangle, a square and a
@@ -147,131 +240,54 @@ export function Playground() {
             display={percent(options.spec?.aspect ?? 1)}
             onChange={(aspect) => setSpec({ aspect })}
           />
-        </Group>
-
-        <Group label={m.group_size()}>
-          <Slider
-            label={m.ctl_size()}
-            value={options.size ?? 150}
-            min={24}
-            max={260}
-            step={1}
-            display={`${options.size}px`}
-            onChange={(size) => set({ size })}
-          />
-          {/* two sliders, not one encoding "7x7" in a range input: Number("7x7") is NaN,
-                so the combined control silently set both axes to NaN on the first drag */}
-          <Slider
-            label={m.ctl_cols()}
-            value={options.cols ?? 7}
-            min={1}
-            max={16}
-            step={1}
-            display={String(options.cols)}
-            onChange={(cols) => set({ cols })}
-          />
-          <Slider
-            label={m.ctl_rows()}
-            value={options.rows ?? 7}
-            min={1}
-            max={16}
-            step={1}
-            display={String(options.rows)}
-            onChange={(rows) => set({ rows })}
-          />
-          <Slider
-            label={m.ctl_dot_cell()}
-            value={Math.round((options.dotSize ?? 0.55) * 100)}
-            min={5}
-            max={200}
-            step={1}
-            display={`${Math.round((options.dotSize ?? 0.55) * 100)}%`}
-            onChange={(v) => set({ dotSize: v / 100 })}
-          />
-          <Slider
-            label={m.ctl_gap_x()}
-            value={Math.round((options.gapX ?? 0) * 100)}
-            min={0}
-            max={200}
-            step={5}
-            display={percent(options.gapX ?? 0)}
-            onChange={(v) => set({ gapX: v / 100 })}
-          />
-          <Slider
-            label={m.ctl_gap_y()}
-            value={Math.round((options.gapY ?? 0) * 100)}
-            min={0}
-            max={200}
-            step={5}
-            display={percent(options.gapY ?? 0)}
-            onChange={(v) => set({ gapY: v / 100 })}
-          />
-        </Group>
-
-        <Group label={m.group_motion()}>
-          <Select
-            label={m.ctl_preset()}
-            value={options.preset}
-            hint={taskLabel(options.preset ?? "spiral")}
-            onChange={(preset) => set({ preset: preset as PresetName })}
-            options={PRESET_KEYS.map((key) => ({ value: key, label: key }))}
-          />
           <PercentSlider
-            label={m.ctl_speed()}
-            fraction={options.speed ?? 1}
-            min={5}
-            max={300}
-            display={m.value_speed({ value: (options.speed ?? 1).toFixed(2) })}
-            onChange={(speed) => set({ speed })}
-          />
-          {/* The label states the preset's OWN number rather than the word "preset":
-              the thumb is sitting at 95% and a label reading only "preset" tells you
-              nothing about where it is. And once you drag, `onReset` is the only way
-              back to following the preset — a dial you can leave but not return to is
-              a trap, and switching the preset no longer moves this one. */}
-          <PercentSlider
-            label={m.ctl_stagger()}
-            fraction={options.stagger ?? PRESETS[options.preset ?? "spiral"]!.spread}
-            max={200}
-            display={
-              options.stagger == null
-                ? m.value_preset({
-                    value: percentOf(
-                      options.stagger ?? PRESETS[options.preset ?? "spiral"]!.spread,
-                    ),
-                  })
-                : percentOf(options.stagger)
-            }
-            dirty={options.stagger != null}
-            onReset={() => set({ stagger: null })}
-            onChange={(stagger) => set({ stagger })}
-          />
-          <Slider
             label={m.ctl_softness()}
-            value={Math.round((options.softness ?? 0) * 100)}
-            min={0}
-            max={100}
-            step={1}
+            fraction={options.softness ?? 0}
             display={`${Math.round((options.softness ?? 0) * 100)}%`}
             onChange={(v) => set({ softness: v / 100 })}
           />
-          <Slider
+          <PercentSlider
             label={m.ctl_grow()}
-            value={Math.round((options.grow ?? 0.5) * 100)}
-            min={0}
-            max={100}
-            step={1}
+            fraction={options.grow ?? 0.5}
             display={percent(options.grow ?? 0.5)}
             onChange={(v) => set({ grow: v / 100 })}
           />
-          <Slider
+          <PercentSlider
             label={m.ctl_floor()}
-            value={Math.round((options.floor ?? 0.16) * 100)}
-            min={0}
-            max={100}
-            step={1}
+            fraction={options.floor ?? 0.16}
             display={percent(options.floor ?? 0.16)}
             onChange={(v) => set({ floor: v / 100 })}
+          />
+        </Group>
+
+        <Group label={m.group_size()}>
+          {/* overall size LAST in the geometry column: it decides how much room the field
+              takes, not what it looks like, and it is the setting least likely to be the
+              reason someone opened the page */}
+          <Slider
+            label={m.ctl_size()}
+            value={options.size ?? DEFAULTS.size}
+            min={24}
+            max={260}
+            step={1}
+            display={`${options.size ?? DEFAULTS.size}px`}
+            onChange={(size) => set({ size })}
+          />
+          <PercentSlider
+            label={m.ctl_gap_x()}
+            fraction={options.gapX ?? 0}
+            step={5}
+            max={200}
+            display={percent(options.gapX ?? 0)}
+            onChange={(v) => set({ gapX: v / 100 })}
+          />
+          <PercentSlider
+            label={m.ctl_gap_y()}
+            fraction={options.gapY ?? 0}
+            step={5}
+            max={200}
+            display={percent(options.gapY ?? 0)}
+            onChange={(v) => set({ gapY: v / 100 })}
           />
         </Group>
 
@@ -285,19 +301,19 @@ export function Playground() {
           {m.css_renderer()} <span>{m.css_renderer_note()}</span>
         </label>
         {!cssAvailable && <p className="playground-note">{m.css_refused()}</p>}
-      </div>
 
-      <pre className="playground-readout">
-        {[
-          `${m.readout_dot_cell()}   ${Math.round((options.dotSize ?? 0) * 100)}%`,
-          `${m.readout_dot_pitch()}  ${Math.round(pitchShare * 100)}%    ${m.readout_touching_hint()}`,
-          `${m.readout_touching()}  ${m.readout_touching_value({ value: touching.toFixed(2) })}`,
-          `${m.readout_pitch()}        ${geometry.pitchX.toFixed(1)} × ${geometry.pitchY.toFixed(1)} px`,
-          `${m.readout_dot()}          ${geometry.dotPx.toFixed(1)} px`,
-          `${m.readout_silhouette()}   ${silhouetteLabel(options.silhouette ?? "square")}   dot ${polygonName(sides)}`,
-          `${m.readout_renderer()}     ${cssRenderer ? "css" : "svg"}   ${m.readout_speed()} ${m.value_speed({ value: (options.speed ?? 1).toFixed(2) })}`,
-        ].join("\n")}
-      </pre>
+        <pre className="playground-readout">
+          {[
+            `${m.readout_dot_cell()}   ${Math.round((options.dotSize ?? 0) * 100)}%`,
+            `${m.readout_dot_pitch()}  ${Math.round(pitchShare * 100)}%    ${m.readout_touching_hint()}`,
+            `${m.readout_touching()}  ${m.readout_touching_value({ value: touching.toFixed(2) })}`,
+            `${m.readout_pitch()}        ${geometry.pitchX.toFixed(1)} × ${geometry.pitchY.toFixed(1)} px`,
+            `${m.readout_dot()}          ${geometry.dotPx.toFixed(1)} px`,
+            `${m.readout_silhouette()}   ${silhouetteLabel(options.silhouette ?? DEFAULTS.silhouette)}   dot ${polygonName(sides)}`,
+            `${m.readout_renderer()}     ${cssRenderer ? "css" : "svg"}   ${m.readout_speed()} ${m.value_speed({ value: (options.speed ?? 1).toFixed(2) })}`,
+          ].join("\n")}
+        </pre>
+      </div>
     </div>
   );
 }
@@ -305,42 +321,59 @@ export function Playground() {
 const percent = (v: number) => percentOf(v);
 const percentOf = (v: number) => `${Math.round(v * 100)}%`;
 
+/** the radius at which this polygon's corners are fully rounded — a true circle */
+function inradiusOf(sides: number): number {
+  return glyphPath({ sides }).inradius;
+}
+
+/**
+ * Rows and columns as buttons rather than a range input.
+ *
+ * A range input's thumb has to be hunted for and dragged to hit a target, and for a
+ * small integer that is strictly worse than two buttons: you want "one more" and "one
+ * fewer", which is what the buttons do. It is also keyboard-operable without hunting,
+ * which a slider is not at `step={1}` over sixteen steps.
+ *
+ * The value is clamped here as well as in the engine, because a disabled button that
+ * still fires its handler is a control that lies about its own bounds.
+ */
+function Stepper({
+  label,
+  value,
+  min,
+  max,
+  onChange,
+}: {
+  label: string;
+  value: number;
+  min: number;
+  max: number;
+  onChange: (value: number) => void;
+}) {
+  const dec = () => onChange(Math.max(min, value - 1));
+  const inc = () => onChange(Math.min(max, value + 1));
+  return (
+    <div className="stepper">
+      <span className="stepper-label">{label}</span>
+      <div className="stepper-controls">
+        <button type="button" onClick={dec} disabled={value <= min} aria-label={`${label} −`}>
+          −
+        </button>
+        <output aria-label={label}>{value}</output>
+        <button type="button" onClick={inc} disabled={value >= max} aria-label={`${label} +`}>
+          +
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function Group({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <fieldset className="playground-group">
       <legend>{label}</legend>
       {children}
     </fieldset>
-  );
-}
-
-function Select({
-  label,
-  value,
-  hint,
-  options,
-  onChange,
-}: {
-  label: string;
-  value: string | undefined;
-  hint?: string;
-  options: { value: string; label: string }[];
-  onChange: (value: string) => void;
-}) {
-  return (
-    <label className="playground-field">
-      <span>
-        {label}
-        {hint && <em>{hint}</em>}
-      </span>
-      <select value={value} onChange={(e) => onChange(e.target.value)}>
-        {options.map((option) => (
-          <option key={option.value} value={option.value}>
-            {option.label}
-          </option>
-        ))}
-      </select>
-    </label>
   );
 }
 
@@ -362,6 +395,7 @@ function PercentSlider({
   step = 1,
   display,
   dirty,
+  compact,
   onReset,
   onChange,
 }: {
@@ -372,6 +406,8 @@ function PercentSlider({
   step?: number;
   display?: string;
   dirty?: boolean;
+  /** laid out for the stage overlay: label beside the track, not above it */
+  compact?: boolean;
   onReset?: () => void;
   onChange: (fraction: number) => void;
 }) {
@@ -384,15 +420,11 @@ function PercentSlider({
       step={step}
       display={display ?? percent(fraction)}
       dirty={dirty}
+      compact={compact}
       onReset={onReset}
       onChange={(v) => onChange(v / 100)}
     />
   );
-}
-
-/** the radius at which this polygon's corners are fully rounded — a true circle */
-function inradiusOf(sides: number): number {
-  return glyphPath({ sides }).inradius;
 }
 
 function Slider({
@@ -403,6 +435,7 @@ function Slider({
   step,
   display,
   dirty,
+  compact,
   onReset,
   onChange,
 }: {
@@ -414,11 +447,12 @@ function Slider({
   display: string;
   /** the value is an override rather than the component/preset default */
   dirty?: boolean;
+  compact?: boolean;
   onReset?: () => void;
   onChange: (value: number) => void;
 }) {
   return (
-    <label className="playground-field">
+    <label className="playground-field" data-compact={compact || undefined}>
       <span>
         {label}
         <em>
@@ -431,7 +465,7 @@ function Slider({
               aria-label={m.ctl_reset_aria({ label })}
               onClick={onReset}
             >
-              {dirty ? "\u21ba" : "\u00b7"}
+              {dirty ? "↺" : "·"}
             </button>
           )}
         </em>
