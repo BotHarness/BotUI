@@ -109,9 +109,23 @@ The generated registry is never committed. A hand-maintained JSON carrying a cop
 ## Releasing
 
 ```bash
-pnpm release            # build + verify, then print what it would publish
-pnpm release -- --yes   # publish, in dependency order
+bash scripts/npm-token.sh   # once: store your npm publish token (gitignored, mode 600)
+pnpm release                # build + verify, then print what it would publish
+pnpm release -- --yes       # publish, in dependency order
 ```
+
+Publishing needs an npm **granular access token** with _Read and write_ and _Bypass 2FA_
+ticked. Without the bypass flag the token cannot publish at all — a passkey or
+authenticator-app 2FA cannot be answered by the CLI, because WebAuthn needs a browser.
+Create one at <https://www.npmjs.com/settings/access-tokens/new>, then run
+`scripts/npm-token.sh`: it validates the token against the registry, stores it in
+`npm_release.token`, and re-prompts automatically once the token expires or is revoked.
+`release.mjs` picks the file up on its own — the token is never a command-line argument,
+so it cannot leak into `ps` output or a CI log.
+
+> Bypass-2FA tokens lose the ability to publish directly in **January 2027**. The durable
+> replacement is [OIDC trusted publishing](https://docs.npmjs.com/trusted-publishers),
+> where GitHub Actions holds no long-lived npm credential at all.
 
 The registry is what `npx` installs from, so it is deployed _after_ the npm publish —
 a version on npm whose registry item does not exist yet would install nothing.

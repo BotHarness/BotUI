@@ -15,3 +15,9 @@ apps/site/public/r/
 apps/site/dist/
 apps/site/.astro/
 apps/site/src/paraglide/
+
+# the npm publish token: a secret, machine-local, never committed. `scripts/npm-token.sh`
+# creates it on demand and `scripts/release.mjs` reads it. Ignored by name rather
+# than by a pattern, so an unrelated file can never be swept up by a wildcard.
+npm_release.token
+npm_release.token.export
