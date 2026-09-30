@@ -239,19 +239,19 @@ export function Playground({ initial }: { initial?: Partial<DotMatrixOptions> })
             label={m.ctl_softness()}
             fraction={options.softness ?? 0}
             display={`${Math.round((options.softness ?? 0) * 100)}%`}
-            onChange={(v) => set({ softness: v / 100 })}
+            onChange={(v) => set({ softness: v })}
           />
           <PercentSlider
             label={m.ctl_grow()}
             fraction={options.grow ?? 0.5}
             display={percent(options.grow ?? 0.5)}
-            onChange={(v) => set({ grow: v / 100 })}
+            onChange={(v) => set({ grow: v })}
           />
           <PercentSlider
             label={m.ctl_floor()}
             fraction={options.floor ?? 0.16}
             display={percent(options.floor ?? 0.16)}
-            onChange={(v) => set({ floor: v / 100 })}
+            onChange={(v) => set({ floor: v })}
           />
         </Group>
 
@@ -310,7 +310,7 @@ export function Playground({ initial }: { initial?: Partial<DotMatrixOptions> })
             step={5}
             max={200}
             display={percent(options.gapX ?? 0)}
-            onChange={(v) => set({ gapX: v / 100 })}
+            onChange={(v) => set({ gapX: v })}
           />
           <PercentSlider
             label={m.ctl_gap_y()}
@@ -318,7 +318,7 @@ export function Playground({ initial }: { initial?: Partial<DotMatrixOptions> })
             step={5}
             max={200}
             display={percent(options.gapY ?? 0)}
-            onChange={(v) => set({ gapY: v / 100 })}
+            onChange={(v) => set({ gapY: v })}
           />
         </Group>
 
@@ -434,7 +434,13 @@ function PercentSlider({
   return (
     <Slider
       label={label}
-      value={Math.round(Math.min(Math.max(fraction, 0), 1) * 100)}
+      // The track is in HUNDREDTHS of the option, always: `onChange` divides by 100, so
+      // track 100 is fraction 1 and track `max` is fraction `max / 100`. The clamp was
+      // `Math.min(fraction, 1) * 100`, which pinned every slider at track 100 — so speed
+      // (max 300), stagger, gap x and gap y each had a top half of their travel that did
+      // nothing, and the thumb sat in the middle of a track it could never reach the end
+      // of. Clamp against the track's own top instead.
+      value={Math.round(Math.min(Math.max(fraction * 100, min), max))}
       min={min}
       max={max}
       step={step}

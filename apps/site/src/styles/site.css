@@ -760,11 +760,26 @@ footer {
 .card-grid {
   display: flex;
   gap: 4px;
+  /* auto on BOTH axes, and the cross-axis one is load-bearing. `overflow-x: auto` alone
+     lets the overflowing cards paint and hit-test OUTSIDE the row: Breathing, Morphing
+     and `off` sat past the row's right edge, over the slider column, and because the
+     sliders come later in the DOM they won the click — the cards looked present and were
+     unclickable. Clipping on y as well stops the escape in the first place. */
   overflow-x: auto;
+  overflow-y: hidden;
   scroll-snap-type: x proximity;
-  /* the scrollbar is the affordance; a fading edge says "there is more" without one */
   padding-bottom: 2px;
   scrollbar-width: thin;
+  /* the row is a flex child of a flex column; without this it sizes to its content and
+     the "overflow" is never inside a scrollport at all */
+  min-width: 0;
+  max-width: 100%;
+  /* `contain: paint` is what actually stops the outgoing cards stealing clicks from the
+     slider column. `overflow-x: auto` scrolls and clips the PAINTING, but the cards were
+     still hit-testable past the row's right edge — Breathing, Morphing and `off` sat on
+     top of `.playground-field`, which comes later in the DOM and therefore won the click.
+     That is why those cards looked selectable and were not. */
+  contain: paint;
 }
 
 .card-grid > .card {
