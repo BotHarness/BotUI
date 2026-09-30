@@ -4,6 +4,8 @@
 
 ### Changed
 
+- **The playground now opens on a hand-picked showcase state** rather than the engine's defaults: 5×5 with no gap at the largest size, `dot/cell` at 198% so the dots overlap into one surface, `grow` at 3% so a dot moves rather than pulses, `stagger` pinned at 70% so picking another motion does not move a slider under the visitor, square silhouette and square dots at radius 0. The engine's own defaults are untouched — that is the library's choice and the page is allowed to disagree — so the values live in a named `SHOWCASE` beside the component, each with the reason it was picked.
+
 - **The site is now Astro + React islands on Cloudflare Pages.** `apps/site` was a hand-written HTML page with a
   module script, served from a Worker with static assets; it is now `output: 'static'` Astro 7 with React 19.3
   islands built by Vite, deployed to the `botui-site` Pages project. The demos mount

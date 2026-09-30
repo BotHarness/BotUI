@@ -153,6 +153,54 @@ const step = (label: RegExp, by: 1 | -1) => {
 const readout = () => container.querySelector(".playground-readout")?.textContent ?? "";
 
 describe("the playground controls", () => {
+  it("opens on the hand-picked showcase state, not the engine defaults", () => {
+    // The page demonstrates a component someone would SHIP, and shipped components are
+    // tuned — so the opening state is chosen rather than inherited. Asserted value by
+    // value because "it looks right" is not a claim a test can make, and each number is a
+    // decision: 198% is what makes the dots read as one surface rather than separate
+    // pixels, 3% grow stops a dot pulsing like a blob, and a PINNED stagger means picking
+    // a different motion does not silently move a slider under the visitor.
+    const labels: Record<string, string> = {};
+    for (const row of container.querySelectorAll(
+      ".playground-side .playground-field, .stage-controls .playground-field",
+    )) {
+      const text = row.querySelector("span")?.textContent ?? "";
+      const name = text.slice(0, text.search(/[0-9]/)).trim();
+      const value =
+        row.querySelector("em")?.textContent?.trim() ??
+        row.querySelector("output")?.textContent?.trim() ??
+        "";
+      if (name) labels[name] = value;
+    }
+    expect(labels["dot / cell"], "over the cell, so the dots overlap").toBe("198%");
+    expect(labels.speed).toContain("1.00");
+    expect(labels.stagger, "pinned at 70%").toMatch(/^70%/);
+    expect(labels.softness).toBe("0%");
+    expect(labels.grow, "almost no breathing").toBe("3%");
+    expect(labels.floor).toBe("16%");
+    expect(labels["corner radius"]).toBe("0% of 71%");
+    expect(labels.aspect).toBe("100%");
+    expect(labels.size, "the largest box").toBe("260px");
+    expect(labels["gap x"]).toBe("0%");
+    expect(labels["gap y"]).toBe("0%");
+
+    expect(
+      [...container.querySelectorAll(".stepper")].map(
+        (s) => s.querySelector("output")?.textContent,
+      ),
+      "5 by 5",
+    ).toEqual(["5", "5"]);
+
+    const text = readout();
+    expect(text, "the readout agrees with the controls").toContain("dot / cell   198%");
+    expect(text).toContain("dot / pitch  198%");
+    expect(text).toContain("dot square");
+    expect(
+      container.querySelector<HTMLInputElement>(".stage-toggle input")?.checked,
+      "CSS by default",
+    ).toBe(true);
+  });
+
   it("paints a field on mount", () => {
     expect(field().length).toBeGreaterThan(10);
   });
@@ -229,7 +277,12 @@ describe("the playground controls", () => {
     const square = field().length;
     pick(card(/shape|形状/i, "ring"));
     const ring = field().length;
-    expect(square, "square keeps every cell of a 7×7 lattice").toBe(49);
+    // read the opening grid off the steppers rather than hardcoding a cell count: the
+    // page opens on a showcase state, and a test about silhouettes has no business
+    // knowing what that state is
+    const cells =
+      Number(stepper(/cols/i).value.textContent) * Number(stepper(/rows/i).value.textContent);
+    expect(square, "square keeps every cell of the lattice").toBe(cells);
     expect(ring, "ring keeps only its outline").toBeLessThan(square);
     expect(readout()).toContain("ring");
   });
@@ -284,9 +337,6 @@ describe("the playground controls", () => {
         () => pick(card(/motion|动效/i, key)),
         `selecting ${key} must not throw`,
       ).not.toThrow();
-      const checked = container.querySelector(
-        ".card-group:nth-of-type(2) input:checked, .card-group input:checked",
-      );
       expect(
         [...container.querySelectorAll(".card-group")]
           .find((g) => /motion|动效/i.test(g.querySelector("legend")?.textContent ?? ""))
@@ -393,9 +443,10 @@ describe("the playground controls", () => {
         ?.querySelector("input:checked")
         ?.getAttribute("value");
 
-    expect(checkedIn(/shape ·|形状/i), "the silhouette card is the engine's default").toBe(
-      DEFAULTS.silhouette,
-    );
+    // the opening silhouette is the showcase's `square`, not the engine's `circle`:
+    // this test catches the card disagreeing with what is DRAWN, and asserting
+    // DEFAULTS would only pass if someone reset the opening state
+    expect(checkedIn(/shape ·|形状/i), "the silhouette card is what is rendered").toBe("square");
     expect(checkedIn(/dot shape|点的形状/i), "the dot card is the engine's default").toBe(
       DEFAULTS.dot,
     );
@@ -404,7 +455,11 @@ describe("the playground controls", () => {
     );
     const drawn = field().length;
     expect(drawn, "the rendered field matches the selected silhouette").toBe(
-      cellsFor(DEFAULTS.cols, DEFAULTS.rows, DEFAULTS.silhouette).length,
+      cellsFor(
+        Number(stepper(/cols/i).value.textContent),
+        Number(stepper(/rows/i).value.textContent),
+        "square",
+      ).length,
     );
   });
 
@@ -485,7 +540,10 @@ describe("the playground controls", () => {
     // That asymmetry is deliberate and load-bearing — a dot that grew to fill the slack
     // on the roomy axis would be wider than it is tall — and it is exactly the kind of
     // thing a test that only checked "the number changed" would miss.
-    for (let i = 0; i < 4; i++) step(/^cols$|列/i, -1);
+    // 6×3, derived: at the opening dot/cell of 198% the old 3×5 is tight on ROWS, so
+    // gap x could not resize the dot and this test would have passed for the wrong reason.
+    while (Number(stepper(/^cols$/i).value.textContent) < 6) step(/^cols$/i, 1);
+    while (Number(stepper(/rows/i).value.textContent) > 3) step(/rows/i, -1);
     // an SVG transform reads `translate(x y) scale(s)` — space separated, not comma
     const transform = /translate\((-?[\d.]+)\s+(-?[\d.]+)\) scale\((-?[\d.]+)\)/;
     const read = (dot: { t?: string | null }) => transform.exec(dot.t ?? "");
@@ -500,7 +558,7 @@ describe("the playground controls", () => {
     const scaleAtWideX = scale();
     drag(slider(/gap x/i), 0);
     expect(axisX(), "gap x must move the dots along x").not.toEqual(xWide);
-    expect(scale(), "gap x must NOT resize the dot — the rows are tighter").toBe(scaleAtWideX);
+    expect(scale(), "gap x DOES resize the dot — it is the tighter axis").not.toBe(scaleAtWideX);
 
     // the tighter axis (y): everything moves. Widening first, for the same reason.
     drag(slider(/gap y/i), 100);
@@ -508,7 +566,7 @@ describe("the playground controls", () => {
     const scaleAtWideY = scale();
     drag(slider(/gap y/i), 0);
     expect(axisY(), "gap y must move the dots along y").not.toEqual(yWide);
-    expect(scale(), "gap y DOES resize the dot — it is the tighter axis").not.toBe(scaleAtWideY);
+    expect(scale(), "gap y must NOT resize the dot — the columns are tighter").toBe(scaleAtWideY);
   });
 
   it("the dot/cell slider still lands the field exactly on the box at 200%", () => {
@@ -698,13 +756,16 @@ describe("a dial that follows a preset must be able to return to it", () => {
 
   it("the label states the preset’s own number, so it can never disagree with the thumb", () => {
     const row = staggerRow();
-    const shown = row.querySelector("em")?.textContent ?? "";
-    const input = row.querySelector("input") as HTMLInputElement;
     // spiral's spread is 0.95, and the label has to say so. The expectation comes
     // from the message rather than a literal, so this test does not encode a language:
     // a hardcoded "预设" here would have passed in English and failed in Chinese.
-    expect(shown).toContain("95%");
-    expect(Number(input.value)).toBe(95);
+    // the page opens PINNED at 70%, so this row starts as an override and the claim
+    // under test is what happens once it follows the preset again — the reset being the
+    // only way there, which is the one-way door this describe is about
+    act(() => (row.querySelector(".reset") as HTMLButtonElement).click());
+    const followed = row.querySelector("em")?.textContent ?? "";
+    expect(followed, "on the preset, the label states its own number").toContain("95%");
+    expect(Number((row.querySelector("input") as HTMLInputElement).value)).toBe(95);
   });
 
   it("following the preset is reversible", () => {
