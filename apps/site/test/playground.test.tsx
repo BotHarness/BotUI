@@ -6,7 +6,7 @@
  * screenshot and in a DOM dump. So these tests dispatch real input events and read the
  * resulting field: the control has to change the geometry, not the label.
  */
-import { afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { Playground } from "../src/components/Playground.js";
@@ -800,5 +800,86 @@ describe("a dial that follows a preset must be able to return to it", () => {
     pick(card(/motion|动效/i, "ring"));
     expect(Number((staggerRow().querySelector("input") as HTMLInputElement).value)).toBe(34);
     expect(staggerRow().querySelector("em")?.textContent).toMatch(/34%/);
+  });
+});
+
+/** the copy button, by its class — it has no stable accessible name across locales */
+const copyButton = () => {
+  const b = container.querySelector(".showcase-copy button") as HTMLButtonElement | null;
+  if (!b) throw new Error("no copy button");
+  return b;
+};
+
+/** the snippet body, which is always in the DOM and shown only when a write is refused */
+const copyBody = () => {
+  const el = container.querySelector(".showcase-copy-body") as HTMLElement | null;
+  if (!el) throw new Error("no copy body");
+  return el;
+};
+
+const stubClipboard = (fail = false) => {
+  const writeText = vi.fn(async () => {
+    if (fail) throw new Error("denied");
+  });
+  Object.defineProperty(navigator, "clipboard", { value: { writeText }, configurable: true });
+  return writeText;
+};
+
+describe("copying the tuning away", () => {
+  it("copies the install command and the component, so a paste needs nothing else", async () => {
+    const writeText = stubClipboard();
+    await act(async () => copyButton().click());
+
+    expect(writeText).toHaveBeenCalledOnce();
+    const text = writeText.mock.calls[0]![0] as string;
+    expect(text, "the command that has to be true before anything else").toContain(
+      "npx @botharness/botui add dot-matrix",
+    );
+    expect(text, "and the element that follows from it").toContain("<DotMatrix");
+  });
+
+  it("copies the values on the sliders, not the values it opened at", async () => {
+    const writeText = stubClipboard();
+    // change something well away from the opening state, THEN copy — this is the whole
+    // feature, and a generator that emits its own constants would pass the test above
+    drag(slider(/speed/i), 250);
+    expect(readout()).toContain("2.50");
+
+    await act(async () => copyButton().click());
+    expect(writeText.mock.calls[0]![0] as string).toContain("speed={2.5}");
+  });
+
+  it("omits what was left at the default, so the snippet is as short as the change", async () => {
+    const writeText = stubClipboard();
+    drag(slider(/speed/i), 250);
+    await act(async () => copyButton().click());
+    const text = writeText.mock.calls[0]![0] as string;
+    expect(text).not.toContain("floor={", "floor was never touched");
+  });
+
+  it("says so when it has copied", async () => {
+    stubClipboard();
+    await act(async () => copyButton().click());
+    // English literals, not `m.showcase_copied()`: asserting a message against itself
+    // passes even when the message is wrong, and this test exists to catch that the
+    // button says SOMETHING DIFFERENT once it has copied.
+    expect(copyButton().textContent).toBe("copied");
+  });
+
+  it("falls back to selectable text when the clipboard is refused", async () => {
+    stubClipboard(true);
+    await act(async () => copyButton().click());
+    expect(copyButton().textContent, "the refusal is named, not silent").toBe("select it");
+    // and there has to be something to select — a fallback with nothing to select is the
+    // failure this guards
+    expect(copyBody().getAttribute("aria-hidden")).toBe("false");
+    expect(copyBody().textContent).toContain("npx");
+  });
+
+  it("keeps the snippet out of the way until it is needed", () => {
+    stubClipboard();
+    expect(copyBody().getAttribute("aria-hidden"), "long text, folded away by default").toBe(
+      "true",
+    );
   });
 });

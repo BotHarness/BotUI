@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { LiveCard, Matrix, Still } from "./Matrix.js";
 import { CardGroup, SilhouetteCard } from "./Cards.js";
+import { ShowcaseCopy } from "./ShowcaseCopy.js";
 import { m, glyphLabel, polygonName, silhouetteLabel, taskLabel } from "../i18n.js";
 import {
   DEFAULTS,
@@ -368,6 +369,10 @@ export function Playground({ initial }: { initial?: Partial<DotMatrixOptions> })
             `${m.readout_renderer()}     ${cssRenderer ? "css" : "svg"}   ${m.readout_speed()} ${m.value_speed({ value: (options.speed ?? 1).toFixed(2) })}`,
           ].join("\n")}
         </pre>
+
+        {/* The readout is where a visitor has just SEEN the numbers, so the way out is
+            right here — a copy button over the settings they arrived at. */}
+        <ShowcaseCopy tuning={{ options, css: cssRenderer }} />
       </div>
     </div>
   );
