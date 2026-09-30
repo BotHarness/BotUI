@@ -11,10 +11,15 @@ import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { Playground } from "../src/components/Playground.js";
 import { DEFAULTS, cellsFor } from "@botharness/botui-core";
+import { readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 
 // React 19's act() refuses to run unless the environment opts in. Without this every
 // render is a no-op with a warning, and the assertions fail for a reason that has
 // nothing to do with the component.
+const src = join(dirname(fileURLToPath(import.meta.url)), "../src");
+
 beforeAll(() => {
   (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 });
@@ -152,6 +157,29 @@ describe("the playground controls", () => {
     expect(field().length).toBeGreaterThan(10);
   });
 
+  it("every slider can actually reach its own declared maximum", () => {
+    // `PercentSlider` clamped its value to `fraction * 100` with fraction pinned inside
+    // [0, 1] — so a slider declaring `max={200}` could never pass 100. Gap X, Gap Y and
+    // stagger all declare 200, which is the range where dots overlap and where a
+    // per-dot delay is wider than the whole cycle. Those three were pinned at 100: the
+    // thumb sat at the middle of its own track and the top half of the travel did
+    // nothing. A slider whose declared max it cannot reach is a control lying about its
+    // own range, which is the defect the repo already records for these three.
+    const sliders = [...container.querySelectorAll(".playground-field input[type=range]")];
+    expect(sliders.length).toBeGreaterThan(5);
+    for (const input of sliders) {
+      const min = Number(input.min);
+      const max = Number(input.max);
+      const label = input.closest(".playground-field")?.querySelector("span")?.textContent ?? "";
+      // drive it to the top of its own track
+      drag(input, max);
+      const at = Number(input.value);
+      expect(at, `${label.trim()} declares max=${max} but stops at ${at}`).toBe(max);
+      drag(input, min);
+      expect(Number(input.value), `${label.trim()} does not reach its min`).toBe(min);
+    }
+  });
+
   it("opens on the CSS renderer, because it is the one worth demonstrating", () => {
     // CSS costs zero JS per frame and SVG is the escape hatch for the motions CSS
     // cannot express, so the cheaper one is the default and the other has to be asked
@@ -240,6 +268,30 @@ describe("the playground controls", () => {
     expect(labels[0]).toMatch(/softness|波宽/i);
     expect(labels[1]).toMatch(/grow|呼吸/i);
     expect(labels[2]).toMatch(/floor|底噪/i);
+  });
+
+  it("the scrolling rows clip their overflow, so a card cannot sit on top of a slider", () => {
+    // Reported as "Chasing and Morphing often will not click". Those two were clickable;
+    // the cards PAST them were not. `overflow-x: auto` scrolls and clips the PAINTING,
+    // but the outgoing cards stayed hit-testable past the row's right edge — over
+    // `.playground-field`, which comes later in the DOM and therefore won the click. So
+    // Breathing, Morphing and `off` rendered, looked selectable, and swallowed nothing:
+    // the slider underneath them took every click. `contain: paint` is what stops it.
+    //
+    // Asserted against the STYLESHEET, not getComputedStyle: jsdom does not load the
+    // page's CSS at all, so every computed value here came back empty. Reading the source
+    // is weaker than measuring, and the measurement that found this — `elementFromPoint`
+    // inside the overlap, in a real browser — cannot run here. What can be asserted is
+    // that the declarations are present, so a future edit that drops `contain: paint`
+    // fails here instead of shipping again.
+    const css = readFileSync(join(src, "styles/site.css"), "utf8");
+    const row = css.match(/\.card-grid \{([^}]*)\}/)?.[1] ?? "";
+    expect(row, ".card-grid must exist in the stylesheet").not.toBe("");
+    expect(row, "the row scrolls sideways").toMatch(/overflow-x:\s*auto/);
+    // Without this the overflow is clipped visually and still clickable.
+    expect(row, "the row must clip paint, or outgoing cards steal slider clicks").toMatch(
+      /contain:\s*paint/,
+    );
   });
 
   it("a card group is one tab stop with one selection, not a grid of buttons", () => {
