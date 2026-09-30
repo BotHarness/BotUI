@@ -83,9 +83,18 @@ or a disconnected mock is preparatory work, not a finished component.
 new component, or a release PR updates both.
 
 ```bash
+bash scripts/npm-token.sh  # store the npm publish token (gitignored, mode 600)
 pnpm release            # build + verify, then print what it would publish
 pnpm release -- --yes   # publish core → react → cli, then deploy the registry
 ```
+
+Publishing needs a granular npm token with _Read and write_ + _Bypass 2FA_; the account's
+2FA is a passkey, which the CLI cannot answer. `scripts/npm-token.sh` collects and
+validates it into `npm_release.token`, and `release.mjs` reads that file and passes the
+token to npm through the child process's environment — never as an argv flag, which
+`ps` and CI logs would expose. The script can confirm the token _authenticates_; nothing
+short of a real publish can confirm it may _publish_, so `release.mjs` publishes `core`
+first and a permission failure lands before anything is half-released.
 
 Three things about that order are load-bearing:
 

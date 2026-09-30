@@ -35,6 +35,11 @@ BotUI 的所有值得注意的变更都记录在此。格式遵循
   和 `verify` 现在会先跑这一步：全新 clone 时它们原本会因为引用尚不存在的文件而失败。
 - `apps/site/test/playground.test.tsx` 驱动真实控件：10 个测试派发 input 事件并断言场确实变了。
   一个渲染出来但不干活的滑杆，在截图和 DOM dump 里和一个正常工作的滑杆无法区分。
+- **发布到 npm 需要一个 token，而这个账号的 2FA 是 passkey**，CLI 无法完成 WebAuthn 挑战（那需要浏览器）。
+  `scripts/npm-token.sh` 收集 granular access token、向 registry 校验、并存进 `npm_release.token`
+  （已 gitignore，权限 600）；token 过期或被撤销后它会自行重新询问。`release.mjs` 读取该文件，
+  通过子进程的环境变量把 token 交给 npm，而不是作为 argv 参数 —— argv 能被 `ps` 读到，命令行也会进
+  CI 日志。项目级 `.npmrc` 同样可行，但那会让 token 对仓库里每一条 npm 命令生效，连 `npm install` 一起。
 
 ### 修复
 
