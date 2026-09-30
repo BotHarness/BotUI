@@ -948,6 +948,22 @@ describe("direction", () => {
     expect(selected[0]!.value, "and it is the forward end").toBe("outsideIn");
   });
 
+  it("changes the CSS-rendered field, which is the one the site opens on", () => {
+    // The regression this file missed once: the direction tests forced the SVG renderer,
+    // where the field is a pure function of (options, t) and repaints every frame. The CSS
+    // renderer bakes each cell's traversal offset into its inline style when the host is
+    // BUILT, so a direction change reached the state and the copied snippet and left the
+    // field running the old way. This one stays on CSS on purpose.
+    const order = () =>
+      [...container.querySelectorAll<HTMLElement>(".playground-stage [style*='--botui-o']")].map(
+        (c) => c.style.getPropertyValue("--botui-o"),
+      );
+    const before = order();
+    expect(before.length, "the field is CSS-rendered").toBeGreaterThan(0);
+    pick([...dirGroups()[1]!.querySelectorAll(".card")][1]!.querySelector("input")!);
+    expect(order(), "the cells were re-ranked").not.toEqual(before);
+  });
+
   it("changes the DRAWN field, not just a label", () => {
     useSvgRenderer();
     const before = container.querySelector(".playground-stage svg")?.innerHTML;

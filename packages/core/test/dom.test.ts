@@ -4,6 +4,8 @@ import {
   ENVELOPES,
   PRESETS,
   PRESET_KEYS,
+  ORDERS,
+  applyCssVars,
   buildCss,
   buildSvg,
   createDotMatrix,
@@ -12,6 +14,7 @@ import {
   keyframesFor,
   layout,
   maskFor,
+  resolveField,
   resolveOptions,
   softLevel,
   stylesheet,
@@ -135,6 +138,50 @@ describe("the CSS renderer", () => {
     expect(new Set(areas).size).toBe(29);
     expect(areas).toContain("4 / 4"); // the middle
     expect(areas).not.toContain("1 / 1"); // a corner, which a circle drops
+  });
+
+  it("re-ranks the cells IN PLACE when the direction changes on a live host", () => {
+    // This is the regression test for the bug the feature shipped with: direction reached
+    // the state and the copied snippet but not the field, because `applyCssVars` wrote
+    // only the host's own variables and each cell's traversal offset had been baked into
+    // its inline style when the host was BUILT. The earlier direction test called
+    // `buildCss` fresh each time, so it passed while the live path stayed broken.
+    const host = buildCss({ ...base, renderer: "css", direction: [] })!;
+    const before = [...host.children].map((c) => (c as HTMLElement).style.gridArea);
+    const nodeAt = (i: number) => host.children[i];
+
+    // the same host, updated the way a component update does it
+    expect(
+      applyCssVars(
+        host,
+        resolveField({ ...base, renderer: "css", direction: ["counterClockwise"] })!,
+      ),
+      "still in sync",
+    ).toBe(true);
+
+    const after = [...host.children].map((c) => (c as HTMLElement).style.gridArea);
+    expect(after, "the same DOM nodes, not a rebuild").toEqual(before);
+    expect(nodeAt(0), "the leading cell really moved").toBe(host.children[0]);
+    // and the ranking changed
+    const o = [...host.children].map((c) =>
+      Number((c as HTMLElement).style.getPropertyValue("--botui-o")),
+    );
+    const cw = ORDERS.spiral!(0, 0, 5, 5, []);
+    expect(o[0]).not.toBeCloseTo(cw, 2);
+  });
+
+  it("reports the host out of sync when the LATTICE changed, so the cells get rebuilt", () => {
+    // A circle on 7×7 keeps 29 cells and a square keeps 49, so appending to a host built
+    // for the other would give a field the right size and the wrong dots. Rebuilding is
+    // the only correct answer, and it has to be the CALLER's answer — hence the boolean.
+    const host = buildCss({ ...base, cols: 7, rows: 7, silhouette: "circle", renderer: "css" })!;
+    expect(
+      applyCssVars(
+        host,
+        resolveField({ ...base, cols: 7, rows: 7, silhouette: "square", renderer: "css" })!,
+      ),
+      "a different cell set is not patchable",
+    ).toBe(false);
   });
 
   it("re-ranks the per-cell order when the direction changes, with no CSS of its own", () => {

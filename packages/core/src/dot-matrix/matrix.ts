@@ -68,8 +68,14 @@ export function createDotMatrix(
       if (!built) return;
       element.replaceChildren(built);
       host = built;
-    } else {
-      applyCssVars(host, resolved);
+    } else if (!applyCssVars(host, resolved)) {
+      // The cells are not the ones these options call for — a different lattice or a
+      // different silhouette. `applyCssVars` re-ranked what it could and said no; the
+      // field is only correct once the cells themselves are rebuilt.
+      const built = buildCss(live);
+      if (!built) return;
+      element.replaceChildren(built);
+      host = built;
     }
     if (reduced()) host.dataset.reduced = "true";
     else delete host.dataset.reduced;
