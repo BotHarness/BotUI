@@ -180,9 +180,20 @@ describe("the CSS renderer", () => {
     expect(buildCss({ ...base, preset: "spiral" })).not.toBeNull();
   });
 
-  it("flips to stepped timing when the envelope is quantised", () => {
-    expect(buildCss({ ...base, preset: "ring" })!.dataset.timing).toBe("steps-3");
-    expect(buildCss({ ...base, preset: "spiral" })!.dataset.timing).toBe("linear");
+  it("uses linear timing for every motion, because no envelope is quantised", () => {
+    // There used to be a `steps` branch: an envelope could declare `steps: 3`, the field
+    // switched the host to `steps(3, end)` timing, and the motion rendered as three
+    // shelves. `chase` was the only user, and it was the reason `chasing` read as unsmooth
+    // — so the branch went with it. This asserts the shape of what replaced it: every
+    // envelope interpolates, therefore every host gets linear timing.
+    // `applyCssVars` only runs on the CSS path, and it writes to the field the engine
+    // BUILDS inside the mount point — not to the mount point itself
+    const mount = document.createElement("div");
+    const dm = createDotMatrix(mount, { preset: "ring", renderer: "css" });
+    const field = mount.querySelector<HTMLElement>(".botui-dot-matrix");
+    expect(field, "the CSS renderer builds a field").toBeTruthy();
+    expect(field!.dataset.timing, "every CSS host gets linear timing").toBe("linear");
+    dm.destroy();
   });
 });
 
@@ -212,8 +223,6 @@ describe("the CSS and SVG renderers agree", () => {
         const c = curve(keyframesFor(preset, softness)!);
         for (let i = 0; i <= 40; i++) {
           const p = i / 40;
-          // a stepped envelope is quantised on purpose, so it is exempt
-          if (env.steps) continue;
           expect(
             Math.abs(c(p) - softLevel(p, env, softness)),
             `${preset} softness=${softness} p=${p.toFixed(2)}`,

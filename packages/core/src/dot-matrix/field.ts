@@ -175,7 +175,7 @@ export function applyCssVars(host: HTMLElement, resolved: ResolvedField): void {
   host.style.setProperty("--botui-s-min", (1 - o.grow).toFixed(3));
   host.style.setProperty("--botui-s", (1 + o.grow * 0.9).toFixed(3));
   host.style.color = o.color;
-  host.dataset.timing = env.steps ? `steps-${env.steps}` : "linear";
+  host.dataset.timing = "linear";
 }
 
 /**

@@ -88,13 +88,30 @@ export const ENVELOPES: Record<EnvelopeName, Envelope> = {
     ],
     rest: 0.18,
   },
-  /** three discrete shelves over a short band, then the floor */
+  /**
+   * A chasing crest: a fast rise, then a DECAY, so the ring carries a lit tail behind
+   * the high point instead of a shelf edge.
+   *
+   * This used to be `steps: 3` — three hard brightness values over the band. That is the
+   * one thing this file's own rule forbids ("never quantise brightness into shelves"), and
+   * it is why `chasing` read as unsmooth: the entire motion had three levels, so every
+   * cell crossing a shelf jumped, and with `spread: 0.34` across a ring several cells
+   * crossed one in the same frame. Measured, it had 3 distinct brightness levels across a
+   * cycle where `comet` had 78.
+   *
+   * The rise is still faster than the fall, because a chase is defined by its leading
+   * edge. But the fall is piecewise-linear over several stops, so the tail is a gradient
+   * and neighbouring dots differ by an amount you can see rather than by a cliff.
+   */
   chase: {
-    steps: 3,
-    duty: 0.34,
+    duty: 0.46,
     stops: [
       [0, 0.16],
-      [0.34, 1],
+      [0.07, 1],
+      [0.16, 0.72],
+      [0.26, 0.48],
+      [0.36, 0.28],
+      [0.46, 0.16],
     ],
     rest: 0.16,
   },
@@ -114,12 +131,6 @@ export function level(p: number, env: Envelope): number {
   if (env.gauss) {
     const d = Math.min(p, 1 - p);
     return Math.exp(-(d * d) / env.gauss);
-  }
-  if (env.steps) {
-    // `steps` shelves across the BAND, normalised to 0..1, so the shelves are
-    // floor..peak and not floor..something-below-peak
-    const u = Math.min(env.steps - 1, Math.floor((p / (env.duty ?? 1)) * env.steps));
-    return env.rest + (1 - env.rest) * (u / (env.steps - 1));
   }
   return clamp01(envelope(p, env.stops, env.rest));
 }

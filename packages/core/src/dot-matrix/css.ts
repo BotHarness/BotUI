@@ -54,9 +54,6 @@ const BASE_CSS = `/* BotUI · dot matrix — the CSS renderer.
   animation-delay: calc(var(--botui-o, 0) * var(--botui-seed, -0.95) * var(--botui-cycle, 1500ms));
 }
 
-.botui-dot-matrix[data-timing^='steps'] > i {
-  animation-timing-function: steps(3, end);
-}
 
 /* Reduced motion: no cycle at all. Each dot holds a static level derived from its
  * own traversal position, so the field still reads as a lit matrix — a still

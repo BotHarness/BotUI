@@ -43,7 +43,6 @@ export interface Envelope {
   /** a travelling gaussian instead of a stop table — the moving-highlight arm */
   gauss?: number;
   /** render as N discrete shelves across the band instead of a gradient */
-  steps?: number;
   /** the CSS cycle length; the runtime divides it by `speed` */
   cycleMs?: number;
 }
