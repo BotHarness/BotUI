@@ -532,27 +532,9 @@ footer {
    scrolled past two card groups — which is what "there is no way to adjust these" was.
    A control you cannot see is a control you cannot find, and the whole page is about
    adjusting things while looking at them. */
-.playground-stage,
-.playground-side {
+.playground-stage {
   position: sticky;
-  /* 8px, not 20px: the side column is 817px of content and a 20px offset left a
-     773px box, so `softness`, `grow` and `floor` — the three the report was about —
-     sat just below the fold again. Both columns share the offset so they scroll as
-     one; the columns are independent scrollers, not one pane. */
   top: 8px;
-}
-
-/* A sticky element taller than its scrollport stops sticking — it scrolls with the page
-   from the top, which is the original bug. Capping the column at the viewport and
-   letting it scroll internally keeps every slider reachable however short the window
-   is. Only the side column needs this; the stage is bounded by its own content. */
-.playground-side {
-  max-height: calc(100vh - 16px);
-  overflow-y: auto;
-  padding-right: 4px;
-  /* the scrollbar was eating 20px of the column's width, which is 20px the sliders
-     did not get. `auto` lets the browser decide and most of them overlay it. */
-  scrollbar-width: thin;
 }
 
 .playground-stage {
@@ -576,6 +558,76 @@ footer {
   flex-direction: column;
   gap: 10px;
   min-width: 168px;
+}
+
+/* The renderer switch, on the stage beside the thing it renders. It is a toggle
+   rather than a checkbox because the answer is a mode the field is IN, and CSS is
+   the default: it costs zero JS per frame, which is the thing worth showing. */
+.stage-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.stage-toggle input {
+  position: absolute;
+  opacity: 0;
+  width: 1px;
+  height: 1px;
+}
+
+.stage-toggle:has(input:disabled) {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.stage-toggle:has(input:focus-visible) .stage-toggle-track {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.stage-toggle-track {
+  flex: 0 0 auto;
+  width: 30px;
+  height: 17px;
+  border-radius: 999px;
+  background: var(--line);
+  position: relative;
+  transition: background 120ms ease;
+}
+
+.stage-toggle input:checked + .stage-toggle-track {
+  background: var(--accent);
+}
+
+.stage-toggle-knob {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 13px;
+  height: 13px;
+  border-radius: 999px;
+  background: var(--card);
+  transition: transform 120ms ease;
+}
+
+.stage-toggle input:checked + .stage-toggle-track .stage-toggle-knob {
+  transform: translateX(13px);
+}
+
+.stage-toggle-label {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.25;
+}
+
+.stage-toggle-label em {
+  font-style: normal;
+  font-size: 10px;
+  color: var(--muted);
 }
 
 .stage-controls .playground-field[data-compact] {
@@ -653,6 +705,7 @@ footer {
    A radio group, so the browser supplies "3 of 14", arrow-key movement and a single
    tab stop — none of which a grid of buttons gets for free. */
 .card-group {
+  position: relative;
   border: 0;
   border-top: 1px solid var(--line);
   margin: 0;
@@ -681,13 +734,33 @@ footer {
   color: var(--muted);
 }
 
+/* One scrolling row, not a wrapped grid. A grid grows taller as options are added, and
+   the column it lives in is already taller than the viewport — so every extra shape
+   pushed the sliders further below the fold. A row grows sideways and costs the column
+   nothing, which is what lets all three groups stay on screen. */
 .card-grid {
-  display: grid;
-  grid-template-columns: repeat(var(--cards, 4), minmax(0, 1fr));
+  display: flex;
   gap: 4px;
+  overflow-x: auto;
+  scroll-snap-type: x proximity;
+  /* the scrollbar is the affordance; a fading edge says "there is more" without one */
+  padding-bottom: 2px;
+  scrollbar-width: thin;
+}
+
+.card-grid > .card {
+  flex: 0 0 var(--card-w, 86px);
+  width: var(--card-w, 86px);
+  scroll-snap-align: start;
+}
+
+.card-group[data-overflow]::after {
+  content: "";
+  position: absolute;
 }
 
 .card {
+  position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -745,11 +818,16 @@ footer {
   text-align: center;
   /* two lines max: "Rounded square" fits, a longer name truncates rather than
      pushing its neighbours out of alignment */
+  /* clamped to two lines so one long name cannot make its row taller than the others —
+     but with NO min-height: a 1.3em box plus the clamp was cropping the last row of
+     pixels off single-line names, which rendered "square" as "sqmare". */
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
-  min-height: 1.3em;
+  /* reserves the two lines the clamp allows, so rows stay aligned whether the name
+     wraps or not — without cropping anything */
+  min-height: 2.5em;
 }
 
 .card[data-selected] .card-label {
@@ -766,9 +844,10 @@ footer {
     grid-template-columns: 1fr;
   }
 
-  /* the cards are the primary control on a narrow screen, so they come before the
-     tuning sliders rather than after them */
-  .card-grid {
-    grid-template-columns: repeat(auto-fill, minmax(72px, 1fr));
+  /* still one row: on a narrow screen it scrolls sideways rather than wrapping into
+     a stack that would bury the sliders again */
+  .card {
+    flex-basis: 66px;
+    width: 66px;
   }
 }
