@@ -64,7 +64,7 @@ export function field(options: DotMatrixOptions, t: number): DotRecord[] {
   for (const c of cellsFor(o.cols, o.rows, o.silhouette)) {
     // the order is taken on the full lattice, so trimming the silhouette never
     // renumbers the motion and a shape change never restarts it
-    const ord = order(c.col, c.row, o.cols, o.rows);
+    const ord = order(c.col, c.row, o.cols, o.rows, o.direction);
     const v = clamp01(softLevel(phaseFor(t, ord, spread, o.speed), env, o.softness));
     out.push({
       x: round((c.col - (o.cols - 1) / 2) * L.pitchX),
@@ -206,7 +206,7 @@ export function buildCss(options: DotMatrixOptions): HTMLElement | null {
     // what makes the CSS layout match the SVG one.
     dot.style.gridArea = `${c.row + 1} / ${c.col + 1}`;
     // the raw 0…1 traversal position, kept for the reduced-motion static ramp
-    dot.style.setProperty("--botui-o", order(c.col, c.row, o.cols, o.rows).toFixed(3));
+    dot.style.setProperty("--botui-o", order(c.col, c.row, o.cols, o.rows, o.direction).toFixed(3));
     host.appendChild(dot);
   }
   return host;

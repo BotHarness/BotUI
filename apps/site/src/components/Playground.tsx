@@ -2,10 +2,19 @@ import { useMemo, useState } from "react";
 import { LiveCard, Matrix, Still } from "./Matrix.js";
 import { CardGroup, SilhouetteCard } from "./Cards.js";
 import { ShowcaseCopy } from "./ShowcaseCopy.js";
-import { m, glyphLabel, polygonName, silhouetteLabel, taskLabel } from "../i18n.js";
+import {
+  directionAxisLabel,
+  directionLabel,
+  m,
+  glyphLabel,
+  polygonName,
+  silhouetteLabel,
+  taskLabel,
+} from "../i18n.js";
 import {
   DEFAULTS,
   DOT_SHAPES,
+  ORDER_DIRECTION_AXES,
   DOT_SHAPE_KEYS,
   GLYPH_DEFAULTS,
   PRESETS,
@@ -17,6 +26,7 @@ import {
   layout,
   touchingDotSize,
   type DotGlyphSpec,
+  type Direction,
   type DotMatrixOptions,
   type DotShape,
   type PresetName,
@@ -98,6 +108,16 @@ export function Playground({ initial }: { initial?: Partial<DotMatrixOptions> })
   // shared 1×1 field makes "which dot?" answerable by comparison, and a per-card field
   // would hide a wrong dot behind an unusual arrangement
   const dotBase: DotMatrixOptions = { silhouette: "circle", size: CARD };
+
+  // The axes the CURRENT traversal can vary, from the engine's own table. Asking here
+  // rather than rendering all four and hiding some is what keeps the control honest: the
+  // list of axes and the list of cards can never disagree.
+  //
+  // `PRESETS.off` is null — no motion, no traversal, and therefore no axis to vary — so
+  // the group disappears entirely on `off` rather than offering directions for a field
+  // that is not moving.
+  const order = PRESETS[options.preset ?? DEFAULTS.preset]?.order;
+  const directionAxes = order ? ORDER_DIRECTION_AXES[order] : [];
 
   return (
     <div className="playground">
@@ -201,6 +221,61 @@ export function Playground({ initial }: { initial?: Partial<DotMatrixOptions> })
             />
           )}
         />
+
+        {/* DIRECTION, and it is per-motion rather than global: which ways exist depends
+            on the traversal, so `clockwise` is offered on a spiral and withheld from a
+            concentric ring — a ring is a distance and has no winding, and offering the
+            choice would be a control claiming something the engine does not have.
+
+            One card group PER AXIS, because the axes are independent. A row-major snake
+            has two, and its four corners are four different drawings: a single
+            left/right toggle could only ever reach two of them. */}
+        {directionAxes.map((a) => (
+          <CardGroup
+            key={a.axis}
+            label={m.dir_group()}
+            // the axis name IS the scope: it says what this group changes, which is what
+            // the other groups' scopes do. Sharing one scope string across the direction
+            // groups would make them indistinguishable by text alone.
+            scope={directionAxisLabel(a.axis)}
+            // The axis's FORWARD end stands selected when no token is set, because forward
+            // is the motion's own direction. A third "auto" card would be a fifth card
+            // drawn identically to `forward`, and a radio group with nothing checked would
+            // break the one-selection-per-group contract every other card group keeps.
+            value={
+              (options.direction ?? []).find((d) => d === a.forward || d === a.backward) ??
+              a.forward
+            }
+            onChange={(chosen) =>
+              set({
+                // replace THIS axis and keep the others: two axes are live at once, so
+                // toggling one must not clear the other
+                direction: toggleDirection(options.direction, a, chosen as Direction | undefined),
+              })
+            }
+            options={[
+              { value: a.forward, label: directionLabel(a.forward) },
+              { value: a.backward, label: directionLabel(a.backward) },
+            ]}
+            renderPreview={(value) => (
+              <Still
+                // the engine's OWN frame at this direction — a card that drew an arrow or a
+                // spiral glyph would be an illustration of the motion rather than the motion
+                options={{
+                  cols: 5,
+                  rows: 5,
+                  silhouette: "square",
+                  dot: "circle",
+                  size: 56,
+                  preset: options.preset ?? DEFAULTS.preset,
+                  direction: toggleDirection(options.direction, a, value as Direction),
+                }}
+                size={56}
+                phase={0.12}
+              />
+            )}
+          />
+        ))}
 
         <CardGroup
           label={m.group_dot()}
@@ -377,6 +452,27 @@ export function Playground({ initial }: { initial?: Partial<DotMatrixOptions> })
       </div>
     </div>
   );
+}
+
+/**
+ * Set or clear ONE axis's token, leaving the other axes alone.
+ *
+ * Two axes are live at once on a spiral and on a snake, so the obvious implementation —
+ * `direction: chosen ? [chosen] : []` — would silently clear the winding every time the
+ * radius moved.
+ *
+ * Choosing an axis's FORWARD end clears its token rather than writing one: forward is the
+ * motion's own direction, so `direction: ["clockwise"]` would state what the engine does
+ * anyway, and the snippet emits a token only when something was overridden.
+ */
+function toggleDirection(
+  current: Direction[] | undefined,
+  axis: { forward: Direction; backward: Direction },
+  chosen: Direction | undefined,
+): Direction[] {
+  const rest = (current ?? []).filter((d) => d !== axis.forward && d !== axis.backward);
+  if (!chosen || chosen === axis.forward) return rest;
+  return [...rest, chosen];
 }
 
 const percent = (v: number) => percentOf(v);

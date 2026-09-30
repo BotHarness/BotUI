@@ -1,4 +1,9 @@
-import type { DotMatrixLayout, DotMatrixOptions, ResolvedDotMatrixOptions } from "../types.js";
+import type {
+  Direction,
+  DotMatrixLayout,
+  DotMatrixOptions,
+  ResolvedDotMatrixOptions,
+} from "../types.js";
 import { clamp } from "../internal/math.js";
 import { GLYPH_DEFAULTS } from "./glyph.js";
 
@@ -24,6 +29,8 @@ export const DEFAULTS = {
   gapX: 0.45,
   gapY: 0.45,
   preset: "spiral",
+  /** which way the light travels; empty is the motion's own direction */
+  direction: [] as Direction[],
   floor: 0.16,
   peak: 1,
   speed: 1,
@@ -47,6 +54,8 @@ export function resolveOptions(options: DotMatrixOptions = {}): ResolvedDotMatri
     ...options,
     spec: { ...DEFAULTS.spec, ...options.spec },
     stagger: options.stagger ?? null,
+    // a FRESH array: DEFAULTS.direction must never be handed to a caller that pushes to it
+    direction: [...(options.direction ?? DEFAULTS.direction)],
   };
 }
 

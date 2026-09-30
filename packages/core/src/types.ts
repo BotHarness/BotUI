@@ -47,8 +47,50 @@ export interface Envelope {
   cycleMs?: number;
 }
 
-/** A traversal: 0 leads, 1 trails. Defined on the ACTUAL cols×rows lattice, never a square. */
-export type OrderFn = (col: number, row: number, cols: number, rows: number) => number;
+/**
+ * One end of one traversal axis — "left to right", "clockwise", "outside in".
+ *
+ * This is a property of the TRAVERSAL, not of the envelope, so it is one option for every
+ * motion rather than a dozen presets: `counterClockwise` composes with `spiral` the same
+ * way `grow` composes with a preset it did not choose.
+ *
+ * The vocabulary is deliberately NOT a single "reverse" flag. A row-major snake has two
+ * INDEPENDENT axes — which end of the first row leads, and whether the rows run top to
+ * bottom or bottom to top — and collapsing them into one flag makes the fourth corner
+ * unreachable. That is why `direction` is a list: `["rightToLeft", "bottomToTop"]` is a
+ * real motion and no single token could name it.
+ *
+ * It is also deliberately not the same set everywhere. `clockwise` is meaningless on a
+ * concentric ring, because a ring is a distance and has no winding. ORDER_DIRECTION_AXES
+ * says which axes each order has, so a control can offer only real choices.
+ *
+ * The names are relative to the motion, not to the screen: for a COLUMN-major snake,
+ * `bottomToTop` is the axis it travels along, and for a row-major snake it is the axis it
+ * is series-ordered in. Both are true, which is why each order reads the tokens itself.
+ */
+export type Direction =
+  | "leftToRight"
+  | "rightToLeft"
+  | "topToBottom"
+  | "bottomToTop"
+  | "clockwise"
+  | "counterClockwise"
+  | "outsideIn"
+  | "insideOut";
+
+/**
+ * A traversal: 0 leads, 1 trails. Defined on the ACTUAL cols×rows lattice, never a square.
+ *
+ * `dir` is optional and defaults to the order's own behaviour, so every existing call —
+ * and every existing four-argument order function written by a consumer — keeps working.
+ */
+export type OrderFn = (
+  col: number,
+  row: number,
+  cols: number,
+  rows: number,
+  dir?: readonly Direction[],
+) => number;
 
 /** A cell mask over the lattice. */
 export type SilhouetteFn = (nx: number, ny: number) => boolean;
@@ -156,6 +198,11 @@ export interface DotMatrixOptions {
   gapX?: number;
   gapY?: number;
   preset?: PresetName;
+  /**
+   * Which way the light travels, as one token per axis. OMITTED or empty is the motion's
+   * own direction — every existing call means that, so this is backward compatible.
+   */
+  direction?: Direction[];
   /** the darkest a dot gets */
   floor?: number;
   /** the brightest a dot gets */

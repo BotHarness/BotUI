@@ -56,6 +56,12 @@ function changedOptions(t: Tuning): [string, string][] {
   if ((o.gapX ?? DEFAULTS.gapX) !== DEFAULTS.gapX) out.push(["gapX", num(o.gapX)]);
   if ((o.gapY ?? DEFAULTS.gapY) !== DEFAULTS.gapY) out.push(["gapY", num(o.gapY)]);
   if ((o.preset ?? DEFAULTS.preset) !== DEFAULTS.preset) out.push(["preset", str(o.preset)]);
+
+  // direction is a LIST of axis tokens, and an empty one is the motion's own direction —
+  // so the default stays silent and a visitor who set two axes gets both, in one prop
+  const dir = o.direction ?? [];
+  // no braces around the value: the renderer already emits `name={value}`
+  if (dir.length) out.push(["direction", `[${dir.map((d) => `"${d}"`).join(", ")}]`]);
   if ((o.speed ?? DEFAULTS.speed) !== DEFAULTS.speed) out.push(["speed", num(o.speed)]);
   if (o.stagger != null) out.push(["stagger", num(o.stagger)]);
   if ((o.softness ?? DEFAULTS.softness) !== DEFAULTS.softness)

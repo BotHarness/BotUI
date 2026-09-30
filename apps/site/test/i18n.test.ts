@@ -98,7 +98,10 @@ describe("the message catalogue", () => {
       "components/LocaleSwitch.astro",
     ]) {
       const source = await readFile(join(site, "src", file), "utf8");
-      for (const match of source.matchAll(/\bm\.([a-z0-9_]+)/g)) used.add(match[1]!);
+      // camelCase too: a lowercase-only class silently truncates `dir_leftToRight` to
+      // `dir_leftToR`, which reads as an unused key and made every direction label look
+      // unrendered
+      for (const match of source.matchAll(/\bm\.([A-Za-z0-9_]+)/g)) used.add(match[1]!);
     }
     expect(
       used.size,

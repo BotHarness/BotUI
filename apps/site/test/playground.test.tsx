@@ -894,3 +894,101 @@ describe("copying the tuning away", () => {
     );
   });
 });
+
+describe("direction", () => {
+  /** the direction card groups, by their legend text */
+  const dirGroups = () =>
+    [...container.querySelectorAll(".card-group")].filter((g) =>
+      /Direction|方向/.test(g.querySelector("legend")?.textContent ?? ""),
+    );
+
+  /**
+   * The direction tokens currently set, read from the COPIED snippet rather than from the
+   * component's props: the claim under test is what a visitor carries away, and reading
+   * the component's own state would pass even if the copy step dropped a token.
+   */
+  const directionTokens = () => {
+    const body = container.querySelector(".showcase-copy-body")?.textContent ?? "";
+    const m = /direction=\{\[([^\]]*)\]\}/.exec(body);
+    return m ? m[1]!.split(",").map((t) => t.trim().replace(/"/g, "")) : [];
+  };
+
+  /** the two cards of one axis group, by their label */
+  const axisCards = (group: Element) =>
+    [...group.querySelectorAll(".card")].map((c) => c.textContent?.trim() ?? "");
+
+  it("offers only the axes the current traversal can vary", () => {
+    // the playground opens on spiral, which winds AND has a radius winds AND has a radius
+    const groups = dirGroups();
+    expect(groups.length, "a spiral has two axes").toBe(2);
+    // the axis name is the group's scope, so the two are told apart by text
+    expect(groups[0]!.textContent).toMatch(/Winding|缠绕/);
+    expect(groups[1]!.textContent).toMatch(/Which end leads|哪一端领先/);
+  });
+
+  it("withholds a winding from a concentric ring, which has none", () => {
+    // A ring is a Chebyshev distance and a distance has no winding. Offering the choice
+    // would be a control claiming something the engine cannot do — the same defect as
+    // offering the CSS renderer for a moving highlight.
+    pick(card(/motion|动效/i, "ring"));
+    const groups = dirGroups();
+    expect(groups.length, "a ring has a radius and nothing else").toBe(1);
+    expect(groups[0]!.textContent).toMatch(/Which end leads|哪一端领先/);
+    expect(groups[0]!.textContent).not.toMatch(/Winding|缠绕/);
+  });
+
+  it("shows the motion's OWN end selected until the axis is overridden", () => {
+    // Forward IS the default, so it is drawn selected with no token set — which also keeps
+    // the one-selection-per-group contract. A third "auto" card would be a fifth card drawn
+    // identically to `forward`.
+    const radius = dirGroups()[1]!;
+    expect(axisCards(radius), "one card per end of the axis").toHaveLength(2);
+    const selected = [...radius.querySelectorAll<HTMLInputElement>("input:checked")];
+    expect(selected.length, "one card selected").toBe(1);
+    expect(selected[0]!.value, "and it is the forward end").toBe("outsideIn");
+  });
+
+  it("changes the DRAWN field, not just a label", () => {
+    useSvgRenderer();
+    const before = container.querySelector(".playground-stage svg")?.innerHTML;
+    // the spiral's radius axis, flipped
+    const group = dirGroups()[1]!;
+    const inward = [...group.querySelectorAll(".card")][1] as HTMLInputElement;
+    pick(inward.querySelector("input")!);
+    const after = container.querySelector(".playground-stage svg")?.innerHTML;
+    expect(after, "the field itself redrew").not.toBe(before);
+  });
+
+  it("keeps the other axis when one is changed", () => {
+    // Two axes are live at once, so the obvious implementation — `direction: [chosen]` —
+    // would silently drop the winding every time the radius moved.
+    const [winding, radius] = dirGroups();
+    pick([...winding!.querySelectorAll(".card")][1]!.querySelector("input") as HTMLInputElement);
+    pick([...radius!.querySelectorAll(".card")][0]!.querySelector("input") as HTMLInputElement);
+    // both tokens survive into what gets copied
+    expect(directionTokens()).toEqual(expect.arrayContaining(["counterClockwise"]));
+  });
+
+  it("drops the token when the axis goes back to the motion's own end", () => {
+    const radius = dirGroups()[1]!;
+    const inward = [...radius.querySelectorAll(".card")][1] as HTMLInputElement;
+    pick(inward.querySelector("input")!);
+    expect(directionTokens()).toContain("insideOut");
+    const forward = [...radius.querySelectorAll(".card")][0] as HTMLInputElement;
+    pick(forward.querySelector("input")!);
+    // `outsideIn` would state what the engine does anyway, so the snippet says nothing
+    expect(directionTokens(), "back to the default, so no token is claimed").not.toContain(
+      "outsideIn",
+    );
+  });
+
+  it("copies the direction into the snippet as one list prop", async () => {
+    const writeText = vi.fn(async () => {});
+    Object.defineProperty(navigator, "clipboard", { value: { writeText }, configurable: true });
+    const radius = dirGroups()[1]!;
+    pick([...radius.querySelectorAll(".card")][1]!.querySelector("input") as HTMLInputElement);
+    const button = container.querySelector(".showcase-copy button") as HTMLButtonElement;
+    await act(async () => button.click());
+    expect(writeText.mock.calls[0]![0] as string).toContain('direction={["insideOut"]}');
+  });
+});
