@@ -1135,7 +1135,6 @@ describe("the dot colour", () => {
     // A colour input fires `input` on every pointer move — far more often than the screen
     // refreshes. This is what makes dragging feel like the thing under your finger is the
     // thing on screen, and it is measurable: N events, one write.
-    const commits: string[] = [];
     act(() => {
       swatch().dispatchEvent(new window.Event("input", { bubbles: true }));
       setNativeValue(swatch(), "#111111");

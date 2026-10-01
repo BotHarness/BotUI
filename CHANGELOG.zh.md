@@ -2,6 +2,26 @@
 
 ## [Unreleased]
 
+## [0.2.0] — 2026-10-01
+
+本次发布加入 `direction`，并修复了新选项暴露出的三个缺陷。这是 minor 号：**现有使用者的任何用法都不会坏**，但有两处行为变化值得说明。
+
+## 包内有什么
+
+- **`direction` —— 每个动效都能指定行进方向。** `direction={["counterClockwise", "insideOut"]}`。之所以是列表，因为行优先蛇形有两个互相独立的轴（第一行从哪端开始、各行自上而下还是自下而上），它的四个角是四种不同图形 —— 单一的 `reverse` 开关只能到达两个。构建控件请读 `ORDER_DIRECTION_AXES[order]`：这张表说明每个 order 能兑现哪些轴，所以 UI 不会提供一个引擎会忽略的方向。
+- **`OrderFn` 新增第五个参数 `dir?`。** 可选，因此既有的四参数 order 函数仍能干净赋值，含义也不变。
+- **`applyCssVars` 现在返回 `boolean`** —— 表示 host 是否仍持有这些选项所要求的格子。忽略返回值不受影响。
+
+## 行为变化
+
+- **CSS 渲染器现在对无法表达的动效回退到 SVG**，而不是留一个空元素。`columns` 是把高亮沿着一列**移动**，每格 `animation-delay` 做不到这件事。此前无论如何要求 CSS 都会得到一个空白场；现在你拿到该动效、以 SVG 绘制，且 `handle.options.renderer` 报告 `svg` —— 也就是屏幕上真正在跑的东西。`handle.cssGap()` 仍会说明 CSS 为何被拒绝。
+- **改方向会就地重新排名已挂载的 CSS 场。** 此前它会更新状态而视觉毫无变化。就地改写 `--botui-o` 会平移波前而不重启动画；只有格子集本身变化时才重建 host。
+- **样式表不再为 CSS 无法渲染的动效输出 `@keyframes`。** 它此前为 `columns` 输出的那条规则**什么都不动** —— `spike` 是以周期接缝为中心的 gaussian，按 0 和 1 采样两端都是全亮度，也就是一块静止的全亮场。每个使用者都在携带一条描述"渲染器已拒绝绘制的动效"的规则。
+
+## 站点
+
+Playground、双语文档与 registry 迁到 Cloudflare Pages 上的 Astro + React islands。纯站点改动 —— 带设置复制的按钮、颜色拾取器、showcase 默认值、布局修复 —— 不出现在任何包里。
+
 ### 变更
 
 - **每个动效现在都能指定行进方向。** `direction` 是一组轴 token —— `leftToRight`、`topToBottom`、`clockwise`、`outsideIn` 及各自反向 —— 而螺旋既能选缠绕方向也能选哪一端领先，所以 `direction={["counterClockwise", "insideOut"]}` 是一个动效，而不是两个 preset。它是**列表**，因为行优先的蛇形有两个互相独立的轴：第一行从哪端开始，以及各行是自上而下还是自下而上。它的四个角是四种不同的图形，而单一的 `reverse` 开关最多只能到达其中两个。token 名相对于动效而非屏幕 —— 这正是 `bottomToTop` 对列蛇形意味着翻转行进方向、而对行蛇形意味着翻转行序的原因。
