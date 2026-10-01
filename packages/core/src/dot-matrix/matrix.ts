@@ -1,8 +1,13 @@
-import type { DotMatrixHandle, DotMatrixOptions, DotRecord } from "../types.js";
+import type {
+  DotMatrixHandle,
+  DotMatrixOptions,
+  DotRecord,
+  ResolvedDotMatrixOptions,
+} from "../types.js";
 import { resolveOptions } from "./layout.js";
 import { applyCssVars, buildCss, buildSvg, field, resolveField } from "./field.js";
 import { ensureStylesheet } from "./css.js";
-import { cssRenderGap } from "./presets.js";
+import { cssRenderable, cssRenderGap } from "./presets.js";
 
 /** the frame a reduced-motion field rests on: representative, not the first one */
 const REST_FRAME = 0.18;
@@ -39,7 +44,24 @@ export function createDotMatrix(
   element: HTMLElement,
   options: DotMatrixOptions = {},
 ): DotMatrixHandle {
-  let live = resolveOptions(options);
+  /**
+   * The renderer this field can ACTUALLY paint.
+   *
+   * `buildCss` returns null for a preset the CSS renderer cannot express — a per-dot delay
+   * can offset a phase but cannot move a highlight down a column. Returning nothing left
+   * the element EMPTY, which is what a visitor saw pick `columns` on a site whose default
+   * renderer is CSS: the field was simply blank, and the control claiming CSS was not
+   * wrong so much as meaningless.
+   *
+   * Normalising here rather than inside `paintCss` matters for two reasons: it keeps
+   * `handle.options.renderer` telling the truth about what is on screen, and it means
+   * `paintCss` never has to retry a build it knows will fail — which, from the frame
+   * callback, is once per frame. `cssGap()` still says why.
+   */
+  const paintable = (o: ResolvedDotMatrixOptions): ResolvedDotMatrixOptions =>
+    o.renderer === "css" && !cssRenderable(o.preset) ? { ...o, renderer: "svg" } : o;
+
+  let live = paintable(resolveOptions(options));
   let t = 0;
   let raf = 0;
   let last = 0;
@@ -109,7 +131,7 @@ export function createDotMatrix(
     },
     set(patch) {
       const before = reduced();
-      live = { ...live, ...patch, spec: { ...live.spec, ...patch.spec } };
+      live = paintable({ ...live, ...patch, spec: { ...live.spec, ...patch.spec } });
       if (live.renderer === "css") ensureStylesheet(element.ownerDocument, live.softness);
       if (before !== reduced() && live.renderer === "svg") t = phase(t);
       paint();

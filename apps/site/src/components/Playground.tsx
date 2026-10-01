@@ -102,6 +102,12 @@ export function Playground({ initial }: { initial?: Partial<DotMatrixOptions> })
   // is false, so without the default the switch claimed the engine refused a motion it
   // can express — and it was disabled on first paint for the default field.
   const cssAvailable = cssRenderable(options.preset ?? DEFAULTS.preset);
+  // What the field will ACTUALLY be painted with. The toggle records a preference; the
+  // preset can overrule it — `columns` cannot be expressed in CSS at all, and passing
+  // `renderer="css"` anyway asked the engine for something it refuses, which left the
+  // stage EMPTY rather than falling back. Disabling the switch without honouring it is
+  // the worst of both: the control explains itself while the field shows nothing.
+  const css = cssRenderer && cssAvailable;
   const sides = options.spec?.sides ?? GLYPH_DEFAULTS.sides;
 
   // the dot cards show ONE field so the only difference between them is the dot: a
@@ -179,14 +185,14 @@ export function Playground({ initial }: { initial?: Partial<DotMatrixOptions> })
           </div>
           <Matrix
             {...options}
-            renderer={cssRenderer ? "css" : "svg"}
+            renderer={css ? "css" : "svg"}
             key={`${options.preset ?? DEFAULTS.preset}-${options.silhouette}-${options.cols}x${options.rows}-${options.dot}`}
           />
           {/* The way out, under the field rather than in the sidebar: you tuned this THING,
               and the button that takes it away belongs to the thing. Spans both columns —
               it is a full-width primary action, not another sidebar control, and a control
               that reads as primary should look like one rather than like a ghost button. */}
-          <ShowcaseCopy tuning={{ options, css: cssRenderer }} />
+          <ShowcaseCopy tuning={{ options, css }} />
         </div>
 
         {/* Shape, as pictures. Two groups because the engine has two shapes: the field's
@@ -446,7 +452,7 @@ export function Playground({ initial }: { initial?: Partial<DotMatrixOptions> })
             `${m.readout_pitch()}        ${geometry.pitchX.toFixed(1)} × ${geometry.pitchY.toFixed(1)} px`,
             `${m.readout_dot()}          ${geometry.dotPx.toFixed(1)} px`,
             `${m.readout_silhouette()}   ${silhouetteLabel(options.silhouette ?? DEFAULTS.silhouette)}   dot ${polygonName(sides)}`,
-            `${m.readout_renderer()}     ${cssRenderer ? "css" : "svg"}   ${m.readout_speed()} ${m.value_speed({ value: (options.speed ?? 1).toFixed(2) })}`,
+            `${m.readout_renderer()}     ${css ? "css" : "svg"}   ${m.readout_speed()} ${m.value_speed({ value: (options.speed ?? 1).toFixed(2) })}`,
           ].join("\n")}
         </pre>
       </div>

@@ -279,6 +279,12 @@ export function buildCss(options: DotMatrixOptions): HTMLElement | null {
 export function keyframesFor(presetName: PresetName, softness = 0): string | null {
   const preset = presetFor(presetName);
   if (!preset) return null;
+  // No keyframes for a preset the CSS renderer refuses, by the same rule `buildCss`
+  // applies. Publishing them was a LIE rather than dead weight: the spike envelope is a
+  // gaussian centred on the seam, so sampling it at the two keyframe positions the stop
+  // table names — 0 and 1 — yields full brightness at BOTH, and the emitted rule animates
+  // nothing. `spike` cannot be sampled without knowing the cycle.
+  if (!preset.css) return null;
   const env = ENVELOPES[preset.env];
   const at = (p: number) => {
     const s = clamp01(softLevel(p, env, softness));
