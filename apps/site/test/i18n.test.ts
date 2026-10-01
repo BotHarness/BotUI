@@ -97,6 +97,7 @@ describe("the message catalogue", () => {
       // scan silently stops covering half the site
       "components/ShowcaseCopy.tsx",
       "components/ColorPicker.tsx",
+      "components/TraversalDemo.tsx",
       "i18n.ts",
       "components/Home.astro",
       "layouts/Base.astro",

@@ -3,6 +3,7 @@ import Base from '../layouts/Base.astro';
 import { InstallCommand } from './InstallCommand';
 import { Playground } from './Playground';
 import { RegistryList } from './RegistryList';
+import { TraversalDemo } from './TraversalDemo';
 import LocaleSwitch from './LocaleSwitch.astro';
 import { m } from '../paraglide/messages.js';
 import { localizeHref, locales } from '../paraglide/runtime.js';
@@ -49,6 +50,12 @@ const path = Astro.url.pathname;
          `client:visible` for the same reason — it must be interactive on arrival. -->
     <section class="playground-section">
       <Playground client:load />
+    </section>
+
+    <section class="traversal-section">
+      <h2>{m.demo_traversal_title()}</h2>
+      <p class="lede">{m.demo_traversal_lede()}</p>
+      <TraversalDemo client:visible />
     </section>
 
     <section id={m.nav_components()}>

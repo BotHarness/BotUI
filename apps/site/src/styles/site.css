@@ -167,6 +167,115 @@ h3 {
   cursor: pointer;
 }
 
+/* The `order` seam. Separate from the playground on purpose: `order` is a FUNCTION, so it
+   cannot travel in the copied settings, and a visitor who reproduced the playground's
+   snippet would silently get the preset's motion instead. Its own field, its own code. */
+.traversal-demo {
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--card);
+  padding: 16px;
+}
+
+.traversal-demo-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.traversal-choices {
+  display: flex;
+  gap: 2px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 2px;
+}
+
+.traversal-choices button {
+  font: inherit;
+  font-size: 13px;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  border-radius: 6px;
+  padding: 5px 12px;
+  cursor: pointer;
+}
+
+.traversal-choices button.is-on {
+  background: var(--accent);
+  color: #fff;
+}
+
+.traversal-hint {
+  margin: 0;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.traversal-demo-body {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 20px;
+  align-items: start;
+}
+
+.traversal-field {
+  position: relative;
+  line-height: 0;
+  /* the origin marker sits ON a cell, so a cell at the very corner would have half of it
+     clipped by the field's own edge — which is exactly where a visitor clicks first */
+  padding: 6px;
+}
+
+/* only the rings variant is interactive, and saying so with a pointer is cheaper than
+   disabling it: the chevron has no origin to click */
+.traversal-field[role="button"],
+.traversal-field:has(.traversal-origin) {
+  cursor: crosshair;
+}
+
+/* where the rings currently expand from — the one thing the demo is about, so it is drawn
+   rather than described */
+.traversal-origin {
+  position: absolute;
+  width: 7px;
+  height: 7px;
+  margin: -3.5px 0 0 -3.5px;
+  border-radius: 999px;
+  background: var(--accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 25%, transparent);
+  pointer-events: none;
+  /* over the dots, which are drawn in `currentColor` at the page's ink */
+  z-index: 1;
+}
+
+.traversal-code p {
+  margin: 0 0 8px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.traversal-code pre {
+  margin: 0;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--bg);
+  font-size: 11px;
+  line-height: 1.6;
+  max-height: 320px;
+  overflow: auto;
+}
+
+@media (max-width: 860px) {
+  .traversal-demo-body {
+    grid-template-columns: 1fr;
+  }
+}
+
 /* The dot colour. Full width like the copy button, and in the sticky pane beside the
    field, because a colour you have to look away from to check is not a colour you are
    choosing. */

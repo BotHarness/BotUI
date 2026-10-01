@@ -81,6 +81,9 @@ he copy button said "Your settings, as props — only what you changed", and the
 
 ### Added
 
+- **The site demonstrates `order`.** A capability nobody can see is a capability that quietly stops working, so the seam now has a section of its own with two traversals written the way a reader would write them: a **chevron that accelerates** toward its tips, and **rings that expand from a dot the visitor clicks**. Both answer questions the library's own tables cannot: the shape of a traversal can be anything computable per cell, and its origin can be anywhere.
+- **The demo is deliberately separate from the playground.** `order` is a function, so it cannot travel in the copied settings, and a visitor who reproduced the playground's snippet would silently get the preset's motion instead. Its own field, its own code — and the code shown is the traversals file **imported with `?raw`**, so the source a visitor reads is literally the source that is running and cannot drift from it.
+
 - **You can now supply your own traversal.** `order` takes an `OrderFn` and replaces the preset's — which is the seam the layered design always left open, finally reachable from an option instead of only from a custom renderer. Anything you can compute per cell, you can animate:
 
   ```ts
