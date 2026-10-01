@@ -1008,3 +1008,52 @@ describe("direction", () => {
     expect(writeText.mock.calls[0]![0] as string).toContain('direction={["insideOut"]}');
   });
 });
+
+describe("a motion the CSS renderer cannot express", () => {
+  it("still shows a field, because blank is worse than either renderer", () => {
+    // `columns` moves a highlight down a column; a per-dot animation-delay can only
+    // OFFSET a phase, so buildCss refuses it. The playground disabled the CSS switch and
+    // explained itself — while still passing renderer="css", so the stage went EMPTY.
+    pick(card(/motion|动效/i, "columns"));
+    const stage = container.querySelector(".playground-stage")!;
+    expect(
+      stage.querySelector("svg, .botui-dot-matrix"),
+      "the field is painted one way or the other",
+    ).toBeTruthy();
+  });
+
+  it("says svg in the readout, rather than claiming a mode it is not in", () => {
+    // the CSS switch being disabled is not the same as the field being CSS; a readout that
+    // still said `css` would be the control claiming something the engine is not doing
+    pick(card(/motion|动效/i, "columns"));
+    expect(readout()).toMatch(/renderer\s+svg/);
+    pick(card(/motion|动效/i, "spiral"));
+    expect(readout()).toMatch(/renderer\s+css/);
+  });
+
+  it('copies renderer="css" only when the field really is CSS', () => {
+    const writeText = vi.fn(async () => {});
+    Object.defineProperty(navigator, "clipboard", { value: { writeText }, configurable: true });
+    pick(card(/motion|动效/i, "columns"));
+    const button = container.querySelector(".showcase-copy button") as HTMLButtonElement;
+    return act(async () => button.click()).then(() => {
+      const copied = writeText.mock.calls[0]![0] as string;
+      expect(copied, "a paste that claims CSS would render nothing").not.toContain(
+        'renderer="css"',
+      );
+    });
+  });
+
+  it("puts the switch back when a motion comes back that CSS can express", () => {
+    pick(card(/motion|动效/i, "columns"));
+    expect(
+      container.querySelector<HTMLInputElement>(".stage-toggle input")!.disabled,
+      "disabled while refused",
+    ).toBe(true);
+    pick(card(/motion|动效/i, "spiral"));
+    expect(
+      container.querySelector<HTMLInputElement>(".stage-toggle input")!.disabled,
+      "and usable again",
+    ).toBe(false);
+  });
+});

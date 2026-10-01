@@ -140,6 +140,41 @@ describe("the CSS renderer", () => {
     expect(areas).not.toContain("1 / 1"); // a corner, which a circle drops
   });
 
+  it("renders SVG when asked for CSS on a preset CSS cannot express", () => {
+    // The field was BLANK here. `columns` moves a highlight down a column, which a
+    // per-dot delay cannot do, so `buildCss` returns null — and `paintCss` returned
+    // without painting anything at all. Disabling the site's CSS switch while still
+    // requesting CSS left the stage empty, which is worse than either renderer.
+    const element = document.createElement("div");
+    const dm = createDotMatrix(element, { ...base, cols: 5, rows: 5, renderer: "css" });
+    // spiral IS expressible, so this is a CSS host
+    expect(element.querySelector(".botui-dot-matrix")).toBeTruthy();
+
+    dm.set({ preset: "columns" });
+    expect(element.querySelector("svg"), "still a field after switching to columns").toBeTruthy();
+    expect(
+      element.querySelector(".botui-dot-matrix"),
+      "and not a CSS host it cannot build",
+    ).toBeNull();
+    // and the options tell the truth about what is on screen
+    expect(dm.options.renderer, "reports the renderer it is actually using").toBe("svg");
+    expect(dm.cssGap(), "while still saying why CSS was refused").toBeTruthy();
+    dm.destroy();
+  });
+
+  it("publishes no keyframes for a preset the CSS renderer refuses", () => {
+    // Publishing them was a lie, not dead weight: `spike` is a gaussian centred on the
+    // cycle seam, so sampling it at the two positions the stop table names — 0 and 1 —
+    // gives full brightness at BOTH, and the rule animates nothing at all.
+    expect(keyframesFor("columns"), "no rule for a motion CSS cannot express").toBeNull();
+    expect(stylesheet(0)).not.toContain("botui-dm-columns");
+    // and the renderable ones are all still there
+    for (const p of PRESET_KEYS) {
+      if (p === "off" || !PRESETS[p]!.css) continue;
+      expect(stylesheet(0), p).toContain(`@keyframes botui-dm-${p}`);
+    }
+  });
+
   it("re-ranks the cells IN PLACE when the direction changes on a live host", () => {
     // This is the regression test for the bug the feature shipped with: direction reached
     // the state and the copied snippet but not the field, because `applyCssVars` wrote
