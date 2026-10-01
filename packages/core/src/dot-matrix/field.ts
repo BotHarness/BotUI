@@ -37,7 +37,9 @@ export function resolveField(options: DotMatrixOptions = {}): ResolvedField | nu
   return {
     options: o,
     preset,
-    order: orderFor(preset.order),
+    // the caller's own traversal wins over the preset's, and `order` stays undefined
+    // otherwise rather than being filled in here — see ResolvedDotMatrixOptions
+    order: o.order ?? orderFor(preset.order),
     env: ENVELOPES[preset.env],
     spread: o.stagger ?? preset.spread,
     glyph: glyphPath(specFor(o.dot, o.spec)),

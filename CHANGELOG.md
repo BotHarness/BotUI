@@ -67,6 +67,25 @@ he copy button said "Your settings, as props — only what you changed", and the
 
 ### Added
 
+- **You can now supply your own traversal.** `order` takes an `OrderFn` and replaces the preset's — which is the seam the layered design always left open, finally reachable from an option instead of only from a custom renderer. Anything you can compute per cell, you can animate:
+
+  ```ts
+  // a chevron that speeds up toward its tip
+  const chevron = (col, row, cols, rows) => {
+    const mid = (rows - 1) / 2;
+    const arm = Math.abs(row - mid) / (mid || 1);
+    const v = arm * 0.6 + (col / (cols - 1 || 1)) * 0.4;
+    return v * v;
+  };
+  createDotMatrix(el, { cols: 9, rows: 9, preset: "morph", order: chevron });
+  ```
+
+  **It costs nothing in the CSS renderer** — the host derives each cell's `animation-delay` from this same value, so a custom traversal is still zero JS per frame. That is the asymmetry worth knowing about: a custom _traversal_ is free in both renderers, while a custom _envelope_ would not be, because the CSS animation is a shared `@keyframes` published per preset.
+
+  **It is a function, so it is not copyable.** A component carrying a custom traversal is a component whose motion is code; the playground's copy button omits it rather than pretending a function is a value.
+
+  The README's example is executed by a test — including on 1×1, 1×7 and 7×1 grids, which is where a pasted snippet divides by zero — and including a check that it really accelerates, since an easing that did nothing would still run and still look plausible.
+
 - the swatch is resolved in an effect, and the ref is actually ON the element. Both got broken while editing this and nothing failed: a ref that is not attached reads as null, the effect returns early, and `?? "#000000"` does the rest — so a fallback that HIDES a missing ref is itself part of the defect. jsdom does not resolve `color` into `getComputedStyle`, so the inherited branch is only observable in a browser; what the test pins is the contract that let it slip, namely that the swatch is never handed the literal string.
 
 - the swatch is resolved in an effect, not from a ref. A ref is null during the render that needs it, so the first version always fell through to black — a swatch reporting black for dots that are not black — and `input[type=color]` silently ignores a non-hex value, keeping a stale colour instead. There is now a test that the swatch is always handed a form it will render.
