@@ -304,6 +304,15 @@ h3 {
   grid-template-columns: 1fr;
   gap: 6px;
   font-size: 13px;
+  /* without this the caption's intrinsic width is what the track is sized from */
+  min-width: 0;
+}
+
+.stage-toggle-label em {
+  /* the refusal caption is a sentence, not a control label: let it wrap inside the
+     controls column instead of pushing the column wider */
+  display: block;
+  line-height: 1.5;
 }
 
 .stage-controls label {
@@ -632,7 +641,16 @@ footer {
 
 .playground-stage {
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
+  /* Bounded, not `auto`. The controls column holds a sentence — "this motion is a
+     highlight moving down the field…" — and an `auto` track is sized by max-content, so
+     that one caption grew the track from 264px to 602px and squeezed the field's own track
+     to ZERO. The stage has `overflow: hidden`, so the field was not squashed, it was
+     clipped out of existence: the DOM had all 25 cells and the page showed nothing.
+
+     An `auto` track cannot express "as wide as it needs, but never at the field's
+     expense", and `minmax(0, auto)` is the same thing. The track is capped instead, and
+     `min-width: 0` lets the caption wrap inside that cap rather than widening it. */
+  grid-template-columns: minmax(0, 264px) minmax(0, 1fr);
   border: 1px solid var(--line);
   border-radius: var(--radius);
   background: var(--card);
