@@ -2,6 +2,46 @@
 
 ## [Unreleased]
 
+## [0.2.0] — 2026-10-01
+
+This release adds `direction` and fixes three defects the new option exposed. It is a minor
+bump: nothing a working consumer does today breaks, and two behaviours changed in ways
+worth stating.
+
+## What is in the package
+
+- **`direction` — every motion can be told which way to go.** `direction={["counterClockwise",
+"insideOut"]}`. A list, because a row-major snake has two independent axes (which end of the
+  first row leads, and whether rows run top to bottom), and its four corners are four distinct
+  drawings — a single `reverse` flag could reach two of them. Read
+  `ORDER_DIRECTION_AXES[order]` to build a control: it is the table that says which axes an
+  order can honour, so a UI cannot offer a direction the engine would ignore.
+- **`OrderFn` gained a fifth parameter, `dir?`.** Optional, so an existing four-argument order
+  function still assigns cleanly and keeps meaning what it meant.
+- **`applyCssVars` now returns `boolean`** — whether the host still holds the cells these
+  options call for. Ignoring the return value is unaffected.
+
+## Behaviour changes
+
+- **The CSS renderer now falls back to SVG for a motion it cannot express**, instead of
+  leaving the element empty. `columns` moves a highlight down a column, which a per-dot
+  `animation-delay` cannot do. Asking for CSS anyway used to produce a blank field; you now
+  get the motion, painted as SVG, and `handle.options.renderer` reports `svg` — which is
+  what is actually on screen. `handle.cssGap()` still says why CSS was refused.
+- **A direction change re-ranks an already-mounted CSS field.** It used to update the state
+  and change nothing you could see. Changing `--botui-o` in place shifts the wave without
+  restarting the animations; the host is rebuilt only when the cell set itself changes.
+- **The stylesheet no longer emits `@keyframes` for a motion CSS cannot render.** The rule it
+  emitted for `columns` animated nothing at all — `spike` is a gaussian centred on the cycle
+  seam, so sampling it at 0 and 1 yields full brightness at both ends, a static fully-lit
+  field. Every consumer shipped a rule describing a motion the renderer had refused to draw.
+
+## Site
+
+The playground, the bilingual docs and the registry moved to Astro + React islands on
+Cloudflare Pages. Site-only work — the copy-with-your-settings button, the colour picker, the
+showcase defaults, and the layout fixes — does not appear in any package.
+
 ### Changed
 
 - **Every motion can now be told which way to go.** `direction` is a list of axis tokens — `leftToRight`, `topToBottom`, `clockwise`, `outsideIn` and their opposites — and a spiral winds _and_ chooses an end, so `direction={["counterClockwise", "insideOut"]}` is one motion rather than two presets. It is a **list** because a row-major snake has two independent axes: which end of the first row leads, and whether the rows run top to bottom. Its four corners are four distinct drawings, and a single `reverse` flag could only ever reach two of them. The token names are relative to the motion rather than the screen, which is why `bottomToTop` flips a column-snake's travel but reverses a row-snake's rows.

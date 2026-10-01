@@ -1,6 +1,6 @@
 {
   "name": "@botharness/botui-core",
-  "version": "0.1.2",
+  "version": "0.2.0",
   "description": "The framework-agnostic engine behind BotUI components",
   "keywords": [
     "agent-ui",
