@@ -49,7 +49,6 @@ export function ShowcaseCopy({ tuning }: { tuning: Tuning }) {
         >
           {label}
         </button>
-        <p>{m.showcase_note()}</p>
       </div>
       {/* Always rendered, never conditionally: a `manual` state has to have something to
           select. Hidden with CSS rather than unmounted so the text stays in the DOM. */}

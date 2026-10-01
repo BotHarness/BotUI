@@ -139,12 +139,26 @@ export function ColorPicker({
             setDraft(e.target.value);
             // `parseColor`, NOT `format(…, notation)`: a person who typed hsl into a
             // field that happens to be showing HEX meant hsl, and asking the current
-            // notation to interpret it would reject their own input. Only a PARSEABLE
-            // value reaches the engine — committing `hsl(2` would hand CSS a value it
-            // discards, the field would go blank, and the visitor would blame the picker
-            // rather than their typing.
-            const parsed = parseColor(e.target.value);
-            if (parsed) commit(toHex(parsed));
+            // notation to interpret it would reject their own input.
+            const raw = e.target.value.trim();
+            const parsed = parseColor(raw);
+            if (parsed) {
+              commit(toHex(parsed));
+              return;
+            }
+            // A value this picker cannot parse is still a value the ENGINE can take.
+            // `var(--brand)`, `oklch(...)` and `color-mix(...)` all reach this control and
+            // all work, because the engine hands the string to CSS untouched — so refusing
+            // to commit them would make the control narrower than the component, and a
+            // visitor who pasted a token from their design system would get nothing.
+            //
+            // What must NOT be committed is a HALF-TYPED value: `hsl(2` is a parse failure
+            // that happens to be one of the shapes we pass through. The difference is that
+            // a real CSS value has balanced brackets and is followed by nothing stray, so
+            // an unclosed one is the signal. A visitor who typed half a token then sees the
+            // field keep their text and the field keep its colour, which is the correct
+            // reading of "not yet a value".
+            if (looksLikeCompleteCss(raw)) commit(raw);
           }}
           // on blur, snap an abbreviated form to its full spelling: `#abc` → `#aabbcc`
           onBlur={() => {
@@ -155,12 +169,33 @@ export function ColorPicker({
         />
       </div>
 
-      {/* A value the picker cannot edit, said plainly. `var(--brand)` is a legitimate
-          thing to hand this component and it must keep working — so the control reports
-          that it is showing rather than quietly mangling it. */}
-      {!parseColor(resolved) && (
-        <p className="color-note">{m.color_passthrough({ value: resolved })}</p>
-      )}
+      {/* No note for a value the picker cannot edit. `var(--brand)` is a legitimate thing to
+          hand this component and it must keep working, which it does — the field shows the
+          value verbatim. A line of small grey text explaining that the thing on screen is
+          the thing it was given is the definition of redundant: the field already says it,
+          and a second, smaller copy of the same fact is the one people stop reading. */}
     </div>
   );
+}
+
+/**
+ * Whether an unparseable string is plausibly a COMPLETE CSS colour rather than a
+ * half-typed one.
+ *
+ * The picker passes values it cannot parse straight through, because the engine takes
+ * them. That is only safe if a half-typed token is distinguishable — and it is, because
+ * every real CSS colour value closes what it opens. `hsl(2` does not, so it stays a draft
+ * and the field keeps the colour it had. This is a heuristic and is documented as one: it
+ * would mis-classify a construct with balanced brackets that CSS then rejects, and the
+ * consequence is a field that briefly shows an unparsed colour, which is what the engine
+ * does with any string it is given.
+ */
+function looksLikeCompleteCss(v: string): boolean {
+  if (!v) return false;
+  const opens = (v.match(/\(/g) ?? []).length;
+  const closes = (v.match(/\)/g) ?? []).length;
+  if (opens !== closes) return false;
+  // a bare function call is only complete if it is followed by something, not nothing:
+  // `var(--x` has balanced brackets too, and is not a value
+  return !/^[a-z-]+\([^()]*$/i.test(v.trim());
 }

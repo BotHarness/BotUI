@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+### Changed
+
+- **Two lines of small grey text are gone.** T
+
 ## [0.2.0] — 2026-10-01
 
 This release adds `direction` and fixes three defects the new option exposed. It is a minor
@@ -41,8 +45,7 @@ worth stating.
 The playground, the bilingual docs and the registry moved to Astro + React islands on
 Cloudflare Pages. Site-only work — the copy-with-your-settings button, the colour picker, the
 showcase defaults, and the layout fixes — does not appear in any package.
-
-### Changed
+he copy button said "Your settings, as props — only what you changed", and the colour picker said "currentColor is passed to the engine as-is — it cannot be edited here". Both restated something visible one line away: the snippet is the snippet, and the field already shows whatever value it holds. A second, smaller copy of a fact the reader can see is the copy people stop reading, and it sat between the controls and the button they were about to press.
 
 - **Every motion can now be told which way to go.** `direction` is a list of axis tokens — `leftToRight`, `topToBottom`, `clockwise`, `outsideIn` and their opposites — and a spiral winds _and_ chooses an end, so `direction={["counterClockwise", "insideOut"]}` is one motion rather than two presets. It is a **list** because a row-major snake has two independent axes: which end of the first row leads, and whether the rows run top to bottom. Its four corners are four distinct drawings, and a single `reverse` flag could only ever reach two of them. The token names are relative to the motion rather than the screen, which is why `bottomToTop` flips a column-snake's travel but reverses a row-snake's rows.
 - **Each traversal is offered only the directions it can honour.** A spiral gets a winding and a radius; a ring gets a radius and **no winding**, because a Chebyshev distance is not a walk around a circle — a `clockwise` card there would be a control claiming something the engine cannot do. `ORDER_DIRECTION_AXES` is the table a UI reads, so a control and the engine cannot disagree about what exists.
@@ -180,6 +183,8 @@ All notable changes to BotUI are recorded here. The format follows
 - A README and full npm metadata for all three packages: `repository` (with the `directory`
   that lands the link on that package's subtree), `homepage`, `bugs` and `keywords`. The 0.1.0
   pages rendered with no body and no route back to the source.
+
+### Changed
 
 ### Changed
 

@@ -110,7 +110,6 @@
   "showcase_manual": "请手动选中",
   "showcase_intro": "把这个加载指示器用到当前项目。",
   "showcase_style": "import \"@botharness/botui-core/style.css\";",
-  "showcase_note": "你调过的参数，只多不少。",
   "dir_group": "方向",
   "dir_axis_along": "行进方向",
   "dir_axis_series": "行列被访问的顺序",
@@ -129,6 +128,5 @@
   "ctl_color_swatch": "选择颜色",
   "color_hex": "HEX",
   "color_rgb": "RGB",
-  "color_hsl": "HSL",
-  "color_passthrough": "{value} 会原样传给引擎 —— 这里无法编辑它。"
+  "color_hsl": "HSL"
 }

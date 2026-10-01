@@ -110,7 +110,6 @@
   "showcase_manual": "select it",
   "showcase_intro": "Add BotUI's loading indicator to this project.",
   "showcase_style": "import \"@botharness/botui-core/style.css\";",
-  "showcase_note": "Your settings, as props — only what you changed.",
   "dir_group": "Direction",
   "dir_axis_along": "Direction of travel",
   "dir_axis_series": "Which way the rows are visited",
@@ -129,6 +128,5 @@
   "ctl_color_swatch": "Pick a colour",
   "color_hex": "HEX",
   "color_rgb": "RGB",
-  "color_hsl": "HSL",
-  "color_passthrough": "{value} is passed to the engine as-is — it cannot be edited here."
+  "color_hsl": "HSL"
 }
