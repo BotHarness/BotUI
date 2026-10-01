@@ -24,6 +24,8 @@
 
 ### Added
 
+- the swatch is resolved in an effect, and the ref is actually ON the element. Both got broken while editing this and nothing failed: a ref that is not attached reads as null, the effect returns early, and `?? "#000000"` does the rest — so a fallback that HIDES a missing ref is itself part of the defect. jsdom does not resolve `color` into `getComputedStyle`, so the inherited branch is only observable in a browser; what the test pins is the contract that let it slip, namely that the swatch is never handed the literal string.
+
 - the swatch is resolved in an effect, not from a ref. A ref is null during the render that needs it, so the first version always fell through to black — a swatch reporting black for dots that are not black — and `input[type=color]` silently ignores a non-hex value, keeping a stale colour instead. There is now a test that the swatch is always handed a form it will render.
 
 - **The dot colour is selectable, and it copies.** A picker in the sticky pane beside the field it colours — a native swatch with the OS colour well and the eyedropper, a text field, and HEX / RGB / HSL chips. The colour reaches the copied snippet, which it did not before: `changedOptions` never emitted `color`, so a visitor who picked a colour and pasted the result got a component that drew in `currentColor` and no indication why.

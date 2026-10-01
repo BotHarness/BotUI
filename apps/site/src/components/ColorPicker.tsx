@@ -89,7 +89,7 @@ export function ColorPicker({
   useEffect(() => () => cancelAnimationFrame(frame.current), []);
 
   return (
-    <div className="color-picker">
+    <div className="color-picker" ref={root}>
       <div className="color-picker-head">
         <label htmlFor="botui-color">{m.ctl_color()}</label>
         <div className="color-notation" role="group" aria-label={m.ctl_color_notation()}>
