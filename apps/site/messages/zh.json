@@ -123,5 +123,12 @@
   "dir_clockwise": "顺时针",
   "dir_counterClockwise": "逆时针",
   "dir_outsideIn": "外 → 内",
-  "dir_insideOut": "内 → 外"
+  "dir_insideOut": "内 → 外",
+  "ctl_color": "点的颜色",
+  "ctl_color_notation": "颜色规范",
+  "ctl_color_swatch": "选择颜色",
+  "color_hex": "HEX",
+  "color_rgb": "RGB",
+  "color_hsl": "HSL",
+  "color_passthrough": "{value} 会原样传给引擎 —— 这里无法编辑它。"
 }

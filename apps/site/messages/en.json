@@ -123,5 +123,12 @@
   "dir_clockwise": "Clockwise",
   "dir_counterClockwise": "Counter-clockwise",
   "dir_outsideIn": "Outside → in",
-  "dir_insideOut": "Inside → out"
+  "dir_insideOut": "Inside → out",
+  "ctl_color": "Dot colour",
+  "ctl_color_notation": "Colour notation",
+  "ctl_color_swatch": "Pick a colour",
+  "color_hex": "HEX",
+  "color_rgb": "RGB",
+  "color_hsl": "HSL",
+  "color_passthrough": "{value} is passed to the engine as-is — it cannot be edited here."
 }

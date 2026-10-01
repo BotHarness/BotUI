@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { LiveCard, Matrix, Still } from "./Matrix.js";
 import { CardGroup, SilhouetteCard } from "./Cards.js";
+import { ColorPicker } from "./ColorPicker.js";
 import { ShowcaseCopy } from "./ShowcaseCopy.js";
 import {
   directionAxisLabel,
@@ -192,6 +193,12 @@ export function Playground({ initial }: { initial?: Partial<DotMatrixOptions> })
               and the button that takes it away belongs to the thing. Spans both columns —
               it is a full-width primary action, not another sidebar control, and a control
               that reads as primary should look like one rather than like a ghost button. */}
+          {/* The colour, in the sticky pane beside the field it colours. It belongs here
+              for the same reason the copy button does: it is a property of the field you
+              are looking at, and a colour picked in a sidebar 300px away is a colour you
+              have to look away to check. */}
+          <ColorPicker value={options.color} onChange={(color) => set({ color })} />
+
           <ShowcaseCopy tuning={{ options, css }} />
         </div>
 

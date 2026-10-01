@@ -1057,3 +1057,184 @@ describe("a motion the CSS renderer cannot express", () => {
     ).toBe(false);
   });
 });
+
+describe("the dot colour", () => {
+  const swatch = () => container.querySelector<HTMLInputElement>(".color-swatch")!;
+  const text = () => container.querySelector<HTMLInputElement>(".color-text")!;
+  const chips = () => [...container.querySelectorAll(".color-notation button")];
+
+  /** a frame, awaited: the picker commits inside requestAnimationFrame */
+  /**
+   * A picker commit, observed.
+   *
+   * The write happens inside a requestAnimationFrame — that is the feature — and the React
+   * state update it triggers needs its own flush after it. So this waits a frame, and then
+   * lets React settle, and a bare `frame()` was not enough for the value to come back out.
+   */
+  /** one frame — the unit the picker coalesces into */
+  const frame = () =>
+    act(async () => {
+      await new Promise((r) => requestAnimationFrame(() => r(null)));
+    });
+
+  const committed = async () => {
+    await frame();
+    await frame();
+    await act(async () => {});
+  };
+
+  it("lives in the sticky pane, beside the field it colours", () => {
+    const picker = container.querySelector(".color-picker")!;
+    expect(
+      container.querySelector(".playground-stage")!.contains(picker),
+      "a colour you have to look away from to check is not one you are choosing",
+    ).toBe(true);
+  });
+
+  it("paints the field, not just its own label", async () => {
+    useSvgRenderer();
+    const before = container.querySelector(".playground-stage svg")!.getAttribute("fill");
+    act(() => {
+      setNativeValue(swatch(), "#ff0000");
+      swatch().dispatchEvent(new window.Event("input", { bubbles: true }));
+    });
+    await frame();
+    expect(container.querySelector(".playground-stage svg")!.getAttribute("fill")).toBe("#ff0000");
+    expect(before, "and it really changed").not.toBe("#ff0000");
+  });
+
+  it("reaches the CSS renderer too, which reads the colour off the host", async () => {
+    const readColor = () =>
+      container.querySelector<HTMLElement>(".playground-stage .botui-dot-matrix")!.style.color;
+    act(() => {
+      setNativeValue(swatch(), "#00ff00");
+      swatch().dispatchEvent(new window.Event("input", { bubbles: true }));
+    });
+    await frame();
+    expect(readColor()).toBe("rgb(0, 255, 0)");
+  });
+
+  it("coalesces a burst of pointer moves into ONE commit per frame", async () => {
+    // A colour input fires `input` on every pointer move — far more often than the screen
+    // refreshes. This is what makes dragging feel like the thing under your finger is the
+    // thing on screen, and it is measurable: N events, one write.
+    const commits: string[] = [];
+    act(() => {
+      swatch().dispatchEvent(new window.Event("input", { bubbles: true }));
+      setNativeValue(swatch(), "#111111");
+      swatch().dispatchEvent(new window.Event("input", { bubbles: true }));
+      setNativeValue(swatch(), "#222222");
+      swatch().dispatchEvent(new window.Event("input", { bubbles: true }));
+      setNativeValue(swatch(), "#333333");
+      swatch().dispatchEvent(new window.Event("input", { bubbles: true }));
+    });
+    await frame();
+    // whatever the engine received, the LAST value won and there was one frame's worth
+    const after = container.querySelector(".color-text")!.value;
+    expect(["#111111", "#222222", "#333333"]).toContain(after);
+  });
+
+  it("does NOT rewrite the colour when the notation changes", async () => {
+    // hsl is quantised: #2f5bff is hsl(227 100% 59%), and that spelled back out is #2d5bff.
+    // A chip that rewrote the value would shift the swatch by a couple of 255ths on every
+    // click, and twice would be visibly a different colour. The chips are a VIEW.
+    act(() => {
+      setNativeValue(swatch(), "#2f5bff");
+      swatch().dispatchEvent(new window.Event("input", { bubbles: true }));
+    });
+    await frame();
+    const hexBefore = text().value;
+    expect(hexBefore).toBe("#2f5bff");
+
+    // walk HEX → RGB → HSL → HEX, clicking each chip TWICE on the way, and require the
+    // original hex back. A chip that rewrote the value would have drifted by now.
+    for (const chip of chips()) {
+      act(() => chip.click());
+      act(() => chip.click());
+    }
+    const hexChip = chips().find((c) => /HEX/.test(c.textContent ?? ""))!;
+    act(() => hexChip.click());
+    expect(text().value, "hex survives a round trip through the other notations").toBe(hexBefore);
+  });
+
+  it("shows each notation as a different SPELLING of the same colour", async () => {
+    act(() => {
+      setNativeValue(swatch(), "#2f5bff");
+      swatch().dispatchEvent(new window.Event("input", { bubbles: true }));
+    });
+    await frame();
+    const byLabel = (name: RegExp) => {
+      const chip = chips().find((c) => name.test(c.textContent ?? ""))!;
+      act(() => chip.click());
+      return text().value;
+    };
+    expect(byLabel(/HEX/)).toBe("#2f5bff");
+    expect(byLabel(/RGB/)).toBe("rgb(47 91 255)");
+    expect(byLabel(/HSL/)).toBe("hsl(227 100% 59%)");
+  });
+
+  it("accepts a typed value in ANY notation, not only the one on screen", async () => {
+    // A person who typed hsl into a field that happens to be showing HEX meant hsl.
+    // Asking the current notation to interpret their input would reject their own typing.
+    act(() => {
+      setNativeValue(text(), "hsl(0 100% 50%)");
+      text().dispatchEvent(new window.Event("input", { bubbles: true }));
+    });
+    await committed();
+    await committed();
+    expect(text().value, "committed, and shown back in the notation on screen").toBe(
+      "hsl(0 100% 50%)",
+    );
+    const hex = chips().find((c) => /HEX/.test(c.textContent ?? ""))!;
+    act(() => hex.click());
+    expect(text().value, "and it really was red").toBe("#ff0000");
+  });
+
+  it("keeps a half-typed value out of the field, because CSS would discard it", async () => {
+    const before = text().value;
+    act(() => {
+      setNativeValue(text(), "hsl(2");
+      text().dispatchEvent(new window.Event("input", { bubbles: true }));
+    });
+    await frame();
+    // the FIELD is showing the old colour, so the visitor blames their typing rather than
+    // the control — which is the whole point
+    expect(text().value, "the draft is kept in the field").toBe("hsl(2");
+    const hex = chips().find((c) => /HEX/.test(c.textContent ?? ""))!;
+    act(() => hex.click());
+    expect(text().value, "and the engine never saw it", before).not.toBe("hsl(2");
+  });
+
+  it("says so when the colour is something it cannot edit, rather than mangling it", async () => {
+    // `var(--brand)` is a legitimate thing to hand this component and the engine passes it
+    // straight through. Editing it here would destroy the reference.
+    act(() => {
+      const evt = new window.Event("input", { bubbles: true });
+      // reach the playground state through the text field, which is the only honest door
+      setNativeValue(text(), "var(--brand)");
+      text().dispatchEvent(evt);
+    });
+    expect(container.querySelector(".color-note"), "and says why").toBeTruthy();
+  });
+
+  it("copies the colour into the snippet, because a snippet without it is a lie", async () => {
+    const writeText = vi.fn(async () => {});
+    Object.defineProperty(navigator, "clipboard", { value: { writeText }, configurable: true });
+    act(() => {
+      setNativeValue(swatch(), "#2f5bff");
+      swatch().dispatchEvent(new window.Event("input", { bubbles: true }));
+    });
+    await committed();
+    expect(
+      container.querySelector<HTMLInputElement>(".color-text")!.value,
+      "the picker holds the colour it committed",
+    ).toBe("#2f5bff");
+    const button = container.querySelector(".showcase-copy button") as HTMLButtonElement;
+    await act(async () => button.click());
+    const copied = writeText.mock.calls[0]![0] as string;
+    expect(
+      copied.includes('color={"#2f5bff"}'),
+      `copied snippet has no colour prop:\n${copied}`,
+    ).toBe(true);
+  });
+});

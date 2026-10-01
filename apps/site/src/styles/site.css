@@ -167,6 +167,103 @@ h3 {
   cursor: pointer;
 }
 
+/* The dot colour. Full width like the copy button, and in the sticky pane beside the
+   field, because a colour you have to look away from to check is not a colour you are
+   choosing. */
+.color-picker {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-top: 4px;
+}
+
+.color-picker-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.color-picker-head label {
+  color: var(--muted);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.color-notation {
+  display: flex;
+  gap: 2px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 2px;
+}
+
+.color-notation button {
+  font: inherit;
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  border-radius: 6px;
+  padding: 3px 8px;
+  cursor: pointer;
+}
+
+/* the active notation, not the active COLOUR: these chips are a view of the value and
+   never rewrite it, so this is deliberately quieter than the primary button */
+.color-notation button.is-on {
+  background: var(--accent);
+  color: #fff;
+}
+
+.color-picker-row {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.color-swatch {
+  width: 40px;
+  height: 34px;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: transparent;
+  cursor: pointer;
+  flex: none;
+}
+
+.color-swatch::-webkit-color-swatch-wrapper {
+  padding: 2px;
+}
+
+.color-swatch::-webkit-color-swatch {
+  border: 0;
+  border-radius: 6px;
+}
+
+.color-text {
+  flex: 1;
+  min-width: 0;
+  font: inherit;
+  font-size: 13px;
+  font-family: ui-monospace, monospace;
+  color: var(--ink);
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 7px 9px;
+}
+
+.color-note {
+  margin: 0;
+  font-size: 11px;
+  color: var(--muted);
+}
+
 /* The carried-away settings: the primary action of the playground, so it reads as one.
 
    It sits inside .playground-stage, which is a two-column grid (controls | field), so it
