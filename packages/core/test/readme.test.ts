@@ -42,13 +42,17 @@ describe("the README's own traversal", () => {
     // `mid || 1` and `cols - 1 || 1` are in the snippet precisely because a 1-row or
     // 1-column field divides by zero — the kind of thing that only shows up after somebody
     // has already copied the code.
-    for (const [cols, rows] of [
+    // annotated, because `noUncheckedIndexedAccess` widens a destructured array element to
+    // `number | undefined` — and a `| undefined` here would be a type error rather than the
+    // runtime division-by-zero this test exists to catch
+    const grids: readonly (readonly [number, number])[] = [
       [1, 1],
       [1, 7],
       [7, 1],
       [3, 3],
       [2, 9],
-    ]) {
+    ];
+    for (const [cols, rows] of grids) {
       const f = field({ cols, rows, silhouette: "square", order: chevron, renderer: "svg" }, 0);
       expect(f.length, `${cols}x${rows}`).toBe(cols * rows);
       expect(
