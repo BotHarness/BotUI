@@ -133,6 +133,6 @@
   "demo_traversal_which": "选择遍历",
   "demo_traversal_chevron": "箭头",
   "demo_traversal_rings": "圆环",
-  "demo_traversal_click": "点击场来移动中心。",
+  "demo_traversal_click": "在场内任意位置拖动即可移动中心。",
   "demo_traversal_lede": "遍历就是「格位置」的单一函数，所以你能按格计算的任何东西都能变成动效。下面这两个不是 preset — 它们是 `order` 函数，就在这里写着，并在下面运行。"
 }

@@ -209,10 +209,25 @@ h3 {
   color: #fff;
 }
 
+/* The instruction names the GESTURE, because a centre you can drag and a centre you can
+   only click are different affordances and the sentence is the only thing that says so. */
 .traversal-hint {
   margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 7px;
   font-size: 12px;
   color: var(--muted);
+}
+
+.traversal-hint::before {
+  content: "";
+  width: 14px;
+  height: 14px;
+  border-radius: 999px;
+  border: 2px solid var(--accent);
+  background: color-mix(in srgb, var(--accent) 25%, transparent);
+  flex: none;
 }
 
 .traversal-demo-body {
@@ -225,31 +240,49 @@ h3 {
 .traversal-field {
   position: relative;
   line-height: 0;
-  /* the origin marker sits ON a cell, so a cell at the very corner would have half of it
-     clipped by the field's own edge — which is exactly where a visitor clicks first */
+  /* the handle sits ON a cell, so a cell at the very corner would have half of it clipped
+     by the field's own edge — which is exactly where a visitor reaches first */
   padding: 6px;
+  /* only the rings variant is interactive; the chevron has no origin to move */
+  touch-action: none;
+  cursor: grab;
+  user-select: none;
 }
 
-/* only the rings variant is interactive, and saying so with a pointer is cheaper than
-   disabling it: the chevron has no origin to click */
-.traversal-field[role="button"],
-.traversal-field:has(.traversal-origin) {
-  cursor: crosshair;
+.traversal-field:active {
+  cursor: grabbing;
 }
 
-/* where the rings currently expand from — the one thing the demo is about, so it is drawn
-   rather than described */
+/* The centre handle: a ring with a filled middle. A 7px dot on a field of 81 dots reads as
+   one more dot, and the RING is what says "this is a thing you move" — a filled disc says
+   "this is a pixel", which is what it looked like before. */
+/* The overlay is positioned over the FIELD'S CONTENT BOX, not its padding box. `inset: 0`
+   would span the padding too, so a handle placed at 0% would sit in the padding rather than
+   on the first row of dots — which is exactly what it did before this was measured. The
+   field's own padding is the same 6px, so subtracting it here keeps the two in step. */
 .traversal-origin {
   position: absolute;
-  width: 7px;
-  height: 7px;
-  margin: -3.5px 0 0 -3.5px;
-  border-radius: 999px;
-  background: var(--accent);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 25%, transparent);
+  inset: 6px;
   pointer-events: none;
-  /* over the dots, which are drawn in `currentColor` at the page's ink */
+}
+
+.traversal-origin > span {
+  position: absolute;
+  width: 22px;
+  height: 22px;
+  margin: -11px 0 0 -11px;
+  border-radius: 999px;
+  border: 2.5px solid var(--accent);
+  background: color-mix(in srgb, var(--accent) 30%, transparent);
+  box-shadow:
+    0 0 0 4px color-mix(in srgb, var(--accent) 15%, transparent),
+    0 1px 6px rgb(0 0 0 / 0.25);
   z-index: 1;
+}
+
+.traversal-field:active .traversal-origin > span {
+  transform: scale(1.12);
+  background: color-mix(in srgb, var(--accent) 55%, transparent);
 }
 
 .traversal-code p {

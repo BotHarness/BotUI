@@ -13,25 +13,28 @@ import type { OrderFn } from "@botharness/botui-core";
  */
 
 /**
- * A CHEVRON that accelerates toward its tips.
+ * A NARROW CHEVRON — one cell wide, and quantised like `ring` is.
  *
- * "Accelerating" is not a property of the traversal's SHAPE but of how the value is
- * distributed along it: squaring compresses the early differences and stretches the late
- * ones, so successive dots along each arm start closer together in phase near the tip. A
- * linear chevron is a chevron; an eased one is a chevron that moves like it is going
- * somewhere.
+ * The first version of this was `arm * 0.6 + along * 0.4`, squared. Its level sets are V
+ * shapes in theory and a soft blob in practice, because `arm` takes only five distinct
+ * values on a 9-row field and no envelope can resolve a line out of five steps — the demo
+ * looked like a glow in one corner. Quantisation is what `ring` already does for exactly
+ * this reason, and on an integer lattice it is the only thing that CAN produce a discrete
+ * shape.
  *
- * The value mixes distance from the spine with progress along the field, which is what
- * makes it fold rather than simply translate.
+ * `|along - arm|` is zero ALONG the chevron, so quantising it draws nested outlines of the
+ * arrow rather than a wash across it. Each is one cell wide because consecutive cells differ
+ * by more than one band; that is the "narrow" in narrow arrow, and it is what makes the
+ * shape read as an arrow instead of as a gradient.
  */
 export const chevron: OrderFn = (col, row, cols, rows) => {
   const mid = (rows - 1) / 2;
-  // 0 at the spine, 1 at the outer tips. `|| 1` because a single row has no mid to divide by
   const arm = Math.abs(row - mid) / (mid || 1);
   const along = col / (cols - 1 || 1);
-  const v = arm * 0.6 + along * 0.4;
-  // ease-in
-  return v * v;
+  // one band per step of the grid: any fewer and adjacent cells share a band and the arrow
+  // thickens, any more and there is no cell left to light
+  const bands = Math.max(cols, rows);
+  return Math.round(Math.abs(along - arm) * bands) / bands;
 };
 
 /**
