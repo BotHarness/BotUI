@@ -1,6 +1,6 @@
 {
   "name": "@botharness/botui",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Install BotUI components into your project — copy-and-own, like shadcn",
   "keywords": [
     "agent-ui",

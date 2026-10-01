@@ -1,6 +1,6 @@
 {
   "name": "@botharness/botui-react",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "React bindings for BotUI components",
   "keywords": [
     "agent-ui",
