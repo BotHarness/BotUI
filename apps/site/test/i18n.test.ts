@@ -66,6 +66,10 @@ describe("the message catalogue", () => {
       "ctl_cols",
       "ctl_rows",
       "ctl_preset",
+      // colour notations are the same token in every language, like an option identifier
+      "color_hex",
+      "color_rgb",
+      "color_hsl",
       // a stylesheet import is code, not prose — it is the same bytes in both languages
       // for the same reason `install_command` is: the copy has to paste and run
       "showcase_style",
@@ -92,6 +96,7 @@ describe("the message catalogue", () => {
       // a NEW component must join this list, or its messages read as unrendered and the
       // scan silently stops covering half the site
       "components/ShowcaseCopy.tsx",
+      "components/ColorPicker.tsx",
       "i18n.ts",
       "components/Home.astro",
       "layouts/Base.astro",

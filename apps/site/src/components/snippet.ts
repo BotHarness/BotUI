@@ -60,6 +60,12 @@ function changedOptions(t: Tuning): [string, string][] {
   // direction is a LIST of axis tokens, and an empty one is the motion's own direction —
   // so the default stays silent and a visitor who set two axes gets both, in one prop
   const dir = o.direction ?? [];
+  // `color` is added here rather than in the list above, because the value can be ANY
+  // string CSS accepts — `var(--brand)`, `color-mix(...)`, a named colour — so it must not
+  // go through a formatter that would rewrite it. Silent when unset, because
+  // `currentColor` is what the engine already resolves on its own.
+  if (o.color != null && o.color !== DEFAULTS.color) out.push(["color", str(o.color)]);
+
   // no braces around the value: the renderer already emits `name={value}`
   if (dir.length) out.push(["direction", `[${dir.map((d) => `"${d}"`).join(", ")}]`]);
   if ((o.speed ?? DEFAULTS.speed) !== DEFAULTS.speed) out.push(["speed", num(o.speed)]);

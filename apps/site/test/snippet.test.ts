@@ -7,7 +7,22 @@
  * discovers it when the build breaks. So the assertions here are mostly about the
  * generated text being real rather than plausible — including compiling it.
  */
+import { spawnSync } from "node:child_process";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
+
+/** the same binary `pnpm typecheck` runs */
+const tscBin = join(
+  dirname(fileURLToPath(import.meta.url)),
+  "..",
+  "..",
+  "node_modules",
+  ".bin",
+  "tsc",
+);
 import { snippet } from "../src/components/snippet.js";
 import { PRESETS, type DotMatrixOptions } from "@botharness/botui-core";
 
@@ -176,6 +191,91 @@ describe("the copied snippet", () => {
     expect(out).toContain("dotSize={1.98}");
     expect(out).toContain("speed={1.25}");
     expect(out).toContain("softness={0.333}");
+  });
+
+  it("produces JSX the repo's own compiler accepts", () => {
+    // The strongest form of "it compiles": hand the generated element to `tsc`. A
+    // brace-balance check catches the obvious mistake; this catches the ones nobody
+    // thought to look for. The TypeScript 7 runtime package exports no compiler API —
+    // `import ts from "typescript"` gives back a version string and nothing else — so this
+    // shells out to the same binary `pnpm typecheck` runs, which is the point: the snippet
+    // is checked by the toolchain that will compile it, not by a stand-in.
+    const out = snippet(
+      {
+        options: {
+          size: 260,
+          cols: 5,
+          rows: 5,
+          silhouette: "square",
+          dotSize: 1.98,
+          preset: "spiral",
+          direction: ["counterClockwise", "insideOut"],
+          stagger: 0.7,
+          speed: 1.5,
+          color: "#2f5bff",
+          spec: { sides: 7, radius: 0.5 },
+        },
+        css: true,
+      },
+      LOCALE,
+    );
+    const element = /<DotMatrix[\s\S]*?\/>/.exec(out)?.[0];
+    expect(element, "the snippet contains an element").toBeTruthy();
+
+    const dir = mkdtempSync(join(tmpdir(), "botui-snippet-"));
+    try {
+      writeFileSync(
+        join(dir, "snippet.tsx"),
+        `import { DotMatrix } from "@botharness/botui-react";\nexport const x = (\n${element}\n);\n`,
+      );
+      const r = spawnSync(
+        process.execPath,
+        [
+          tscBin,
+          "--noEmit",
+          "--jsx",
+          "react-jsx",
+          "--target",
+          "esnext",
+          "--moduleResolution",
+          "bundler",
+          "--module",
+          "esnext",
+          join(dir, "snippet.tsx"),
+        ],
+        { encoding: "utf8", cwd: join(dirname(fileURLToPath(import.meta.url)), "..", "..") },
+      );
+      // a missing module is not what this asserts; a SYNTAX error in the element is
+      const syntax = `${r.stdout}${r.stderr}`
+        .split("\n")
+        .filter((l) => /error TS1\d\d\d/.test(l) && !/TS2307|TS2305|TS7016|TS2686/.test(l));
+      expect(syntax, "the generated JSX has no syntax error").toEqual([]);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("emits a colour as a JSX string attribute, not a nested literal", () => {
+    // `color={"#2f5bff"}` — braces around a quoted string. The obvious mistake here is
+    // running the value through `str()` twice, which nests the quotes and emits JSX that
+    // does not compile.
+    expect(build({ color: "#2f5bff" })).toContain('color={"#2f5bff"}');
+  });
+
+  it("passes a colour the engine cannot be shown through the picker verbatim", () => {
+    // `var(--brand)` is what a design system hands this component. Re-spelling it would
+    // destroy the reference, and the snippet is what a visitor pastes.
+    for (const c of ["var(--brand)", "oklch(0.7 0.1 250)", "color-mix(in oklch, red, blue)"]) {
+      expect(build({ color: c }), c).toContain(`color={"${c}"}`);
+    }
+  });
+
+  it("says nothing about a colour that is the engine's own default", () => {
+    expect(
+      build({ color: "currentColor" }),
+      "currentColor is what it already resolves",
+    ).not.toContain("color");
+    expect(build({})).not.toContain("color=");
   });
 
   it("emits the direction as ONE list prop, so two axes survive together", () => {

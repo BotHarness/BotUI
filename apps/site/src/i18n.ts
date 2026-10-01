@@ -96,6 +96,17 @@ const DIRECTION_LABEL: Record<string, () => string> = {
   insideOut: m.dir_insideOut,
 };
 
+/** the name of a colour notation, as a chip */
+const NOTATION_LABEL: Record<string, () => string> = {
+  hex: m.color_hex,
+  rgb: m.color_rgb,
+  hsl: m.color_hsl,
+};
+
+export function notationLabel(n: string): string {
+  return NOTATION_LABEL[n]?.() ?? n;
+}
+
 export function directionLabel(d: string): string {
   return DIRECTION_LABEL[d]?.() ?? d;
 }
