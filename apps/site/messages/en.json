@@ -133,6 +133,6 @@
   "demo_traversal_which": "Which traversal",
   "demo_traversal_chevron": "Chevron",
   "demo_traversal_rings": "Rings",
-  "demo_traversal_click": "Click the field to move the centre.",
+  "demo_traversal_click": "Drag anywhere in the field to move the centre.",
   "demo_traversal_lede": "A traversal is one function of lattice position, so anything you can compute per cell you can animate. These two are not presets — they are `order` functions, written here and running below."
 }

@@ -18,6 +18,10 @@ One feature: `order`, a caller-supplied traversal.
 
 ### Changed
 
+- **The arrow is narrow now, and the centre can be dragged.** Both were reported against the demo: the chevron looked like a glow in one corner, and a centre you had to hit with a single click was a target nobody aimed at twice.
+  - **The chevron is quantised**, the way `ring` already is, and the traversal is `|along - arm|` so its zero-cells ARE the arrow. The first version was a continuous ramp whose level sets are V shapes in theory and a corner blob in practice — `arm` takes five distinct values on a 9-row field and no envelope can resolve a line out of five steps. It also moves from `morph` to `spiral`: the traversal is ours but the envelope is the preset's, and a plateau HOLDS its level instead of running a crest along the arrow.
+  - **The centre is a drag**, with `setPointerCapture` and `touch-action: none`, and the hint names the gesture. The handle is a ring rather than a dot: a 7px disc on a field of 81 dots reads as one more dot, and the ring is what says "this is a thing you move".
+
 - **Two lines of small grey text are gone.** T
 
 ## [0.2.0] — 2026-10-01

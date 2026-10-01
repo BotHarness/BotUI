@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import { Matrix } from "./Matrix.js";
 import { m } from "../i18n.js";
 import { chevron, nearestCell, ringsFrom } from "../traversals.js";
@@ -42,6 +42,31 @@ export function TraversalDemo() {
     [variant, origin],
   );
 
+  /**
+   * A pointer position, in lattice cells.
+   *
+   * The field is drawn from its centre outward in the engine's own px geometry, so the
+   * click has to be measured from the middle rather than from the corner.
+   */
+  const move = useCallback((e: { clientX: number; clientY: number }) => {
+    const box = fieldRef.current?.getBoundingClientRect();
+    if (!box) return;
+    const pitch = box.width / N;
+    setOrigin(
+      nearestCell(
+        {
+          x: e.clientX - box.left - box.width / 2,
+          y: e.clientY - box.top - box.height / 2,
+        },
+        { x: pitch, y: pitch },
+        N,
+        N,
+      ),
+    );
+  }, []);
+
+  const fieldRef = useRef<HTMLDivElement>(null);
+
   return (
     <div className="traversal-demo">
       <div className="traversal-demo-head">
@@ -68,23 +93,22 @@ export function TraversalDemo() {
 
       <div className="traversal-demo-body">
         <div
+          ref={fieldRef}
           className="traversal-field"
-          onClick={(e) => {
+          // DRAG, not click. A centre you can only reach by clicking a single pixel is a
+          // target nobody aims at twice, and the arrow demo asked for a centre precisely so
+          // it could be swept — so a pointer-down commits it and every move while held
+          // updates it. `touch-action: none` in the CSS, or a touch drag scrolls the page
+          // instead of moving the centre.
+          onPointerDown={(e) => {
             if (variant !== "rings") return;
-            const box = e.currentTarget.getBoundingClientRect();
-            // the field is drawn from its centre outward, in the engine's own px geometry
-            const pitch = box.width / N;
-            setOrigin(
-              nearestCell(
-                {
-                  x: e.clientX - box.left - box.width / 2,
-                  y: e.clientY - box.top - box.height / 2,
-                },
-                { x: pitch, y: pitch },
-                N,
-                N,
-              ),
-            );
+            e.currentTarget.setPointerCapture(e.pointerId);
+            move(e);
+          }}
+          onPointerMove={(e) => {
+            // only while held: a hover would make the centre chase the cursor across the
+            // field the moment it entered, which is not a thing anybody asked for
+            if (variant === "rings" && e.buttons) move(e);
           }}
         >
           <Matrix
@@ -96,19 +120,22 @@ export function TraversalDemo() {
             dotSize={0.8}
             gapX={0.12}
             gapY={0.12}
-            preset={variant === "chevron" ? "morph" : "ripple"}
+            preset={variant === "chevron" ? "spiral" : "ripple"}
             renderer="css"
             order={order}
           />
           {variant === "rings" && (
-            <span
-              className="traversal-origin"
-              style={{
-                left: `${(origin.col / (N - 1)) * 100}%`,
-                top: `${(origin.row / (N - 1)) * 100}%`,
-              }}
-              aria-hidden="true"
-            />
+            // The handle, drawn rather than described: a ring with a filled centre, because
+            // a 7px dot on a field of 81 dots reads as one more dot. The ring is what says
+            // "this is a thing you move".
+            <span className="traversal-origin" aria-hidden="true">
+              <span
+                style={{
+                  left: `${(origin.col / (N - 1)) * 100}%`,
+                  top: `${(origin.row / (N - 1)) * 100}%`,
+                }}
+              />
+            </span>
           )}
         </div>
 

@@ -18,18 +18,38 @@ const lead = (order: OrderFn, cols = 9, rows = 9) => {
 };
 
 describe("the chevron example", () => {
-  it("leads from the spine, which is what makes it a chevron", () => {
-    const { row } = lead(chevron);
-    expect(row, "the fold, not a corner or a sweep").toBe(4);
-  });
-
-  it("accelerates — the claim the prose makes, checked against the numbers", () => {
+  it("is zero ALONG the arrow, which is what makes its bands an outline", () => {
     const f = field({ cols: 9, rows: 9, silhouette: "square", renderer: "svg", order: chevron }, 0);
     const at = (col: number, row: number) => f.find((d) => d.col === col && d.row === row)!.order;
-    const steps = [0, 1, 2, 3].map((c) => at(c, 4) - (c > 0 ? at(c - 1, 4) : 0));
-    for (let i = 1; i < steps.length; i++) {
-      expect(steps[i]!, `step ${i} should exceed step ${i - 1}`).toBeGreaterThan(steps[i - 1]!);
-    }
+    // The zero-cells ARE the arrow. Read the whole set rather than a few hand-picked ones:
+    // `arm` spans five rows and `along` spans nine columns, so the arms land every TWO
+    // columns — (0,4) (2,3) (4,2) (6,1) (8,0) and back down — and an earlier version of
+    // this test guessed a 1:1 diagonal and asserted cells that were never on the arrow.
+    // `field()` emits row-major, so the apex is NOT first — the arms are. Comparing by
+    // position in the array rather than by geometry is what made this read as a broken
+    // shape when the shape was fine.
+    const zero = f
+      .filter((d) => d.order === 0)
+      .map((d) => `${d.col},${d.row}`)
+      .sort((a, b) => Number(a.split(",")[1]) - Number(b.split(",")[1]));
+    expect(zero, "one cell per row, forming a V").toHaveLength(9);
+    expect(zero[0], "the top of the upper arm").toBe("8,0");
+    expect(zero[4], "the apex, at the left edge and the middle row").toBe("0,4");
+    expect(zero[8], "and the bottom of the lower arm").toBe("8,8");
+    // and off the arms it is not — which is what makes it an OUTLINE rather than a fill
+    expect(at(8, 4), "the concave side").toBeGreaterThan(0);
+    expect(at(0, 0), "the corner the arrow points away from").toBeGreaterThan(0);
+  });
+
+  it("is NARROW — few distinct bands, so the arrow is a line and not a wash", () => {
+    // The bug this exists to catch: the first version had a continuous ramp, which on a
+    // 9-row field cannot resolve a line and rendered as a corner glow.
+    const f = field({ cols: 9, rows: 9, silhouette: "square", renderer: "svg", order: chevron }, 0);
+    const distinct = new Set(f.map((d) => d.order));
+    expect(distinct.size, "quantised into bands, not continuous").toBeLessThanOrEqual(9);
+    // and each band's cells are few — a band that covers most of the field is a wash
+    const biggest = Math.max(...[...distinct].map((v) => f.filter((d) => d.order === v).length));
+    expect(biggest, "no band covers the field").toBeLessThan(20);
   });
 
   it("survives a 1-row field, which a pasted traversal divides by zero on", () => {
@@ -149,7 +169,9 @@ describe("the code shown beside the field", () => {
     // a function is a snippet that lies the first time someone edits the function.
     const raw = (await import("../src/traversals.ts?raw")).default as string;
     expect(raw, "the raw import is the file's own text").toContain("const arm = Math.abs");
-    expect(raw).toContain("return v * v;");
+    expect(raw, "the body the running function has").toContain(
+      "Math.round(Math.abs(along - arm) * bands)",
+    );
   });
 });
 
