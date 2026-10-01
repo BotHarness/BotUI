@@ -47,6 +47,25 @@ Playground、双语文档与 registry 迁到 Cloudflare Pages 上的 Astro + Rea
 
 ### 新增
 
+- **现在可以提供你自己的遍历。** `order` 接受一个 `OrderFn`，替换 preset 自带的 —— 这是分层设计一直留着的接缝，终于能从 option 到达，而不再只存在于自定义渲染器里。你能按格计算的任何东西，都能变成动效：
+
+  ```ts
+  // 一个向尖端加速的箭头
+  const chevron = (col, row, cols, rows) => {
+    const mid = (rows - 1) / 2;
+    const arm = Math.abs(row - mid) / (mid || 1);
+    const v = arm * 0.6 + (col / (cols - 1 || 1)) * 0.4;
+    return v * v;
+  };
+  createDotMatrix(el, { cols: 9, rows: 9, preset: "morph", order: chevron });
+  ```
+
+  **在 CSS 渲染器下零成本** —— host 就是从同一个值导出每格的 `animation-delay`，所以自定义遍历在那里依然是每帧零 JS。这是值得知道的不对称之处：自定义**遍历**在两个渲染器下都免费，而自定义**包络**不会 —— CSS 动效是按 preset 全局发布的共享 `@keyframes`。
+
+  **它是函数，因此无法被复制。** 携带自定义遍历的组件，其动效就是代码；playground 的复制按钮会略过它，而不是假装函数是个值。
+
+  README 里的示例由测试实际执行 —— 包括 1×1、1×7 和 7×1 这些一粘贴就会除零的网格 —— 并且验证它**确实**在加速，因为一个什么都不做的缓动照样能跑、看起来也照样合理。
+
 - 色块在 effect 里解析，而且 ref 确实挂在元素上。两者都在编辑过程中被弄坏过，且没有任何检查失败：没挂上的 ref 读出来是 null，effect 提前返回，`?? "#000000"` 兜住了剩下的部分 —— 所以一个**掩盖**了 ref 缺失的兜底，本身就是缺陷的一部分。jsdom 不会把 `color` 解析进 `getComputedStyle`，因此继承分支只能在浏览器里观察；测试锁定的是让它溜过去的那条契约：色块永远不会拿到那个字面字符串。
 
 - 色块在 effect 里解析，而不是从 ref。ref 在需要它的那次渲染里必然为 null，所以第一版总是回落到黑色 —— 一个为一群并非黑色的点报告黑色的色块 —— 而且 `input[type=color]` 会静默忽略非 hex 的值，改为保留上一个陈旧颜色。现在有一条测试断言色块拿到的永远是它能渲染的形式。

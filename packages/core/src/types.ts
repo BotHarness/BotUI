@@ -199,6 +199,36 @@ export interface DotMatrixOptions {
   gapY?: number;
   preset?: PresetName;
   /**
+   * YOUR OWN TRAVERSAL, replacing the preset's. This is the seam the whole layered design
+   * leaves open: which dot leads, and in what order, is one function of the lattice
+   * position, so anything you can compute per cell you can animate.
+   *
+   * ```ts
+   * // a chevron that speeds up toward its tip: the traversal value is eased, so
+   * // successive dots along the V start closer together in phase
+   * order: (col, row, cols, rows) => {
+   *   const mid = (rows - 1) / 2;
+   *   const across = Math.abs(row - mid) / (mid || 1);   // 0 at the spine, 1 at the tips
+   *   const along = col / (cols - 1 || 1);
+   *   const v = across * 0.5 + along * 0.5;                // down one arm, along the other
+   *   return v * v;                                       // ease-in: faster toward the tip
+   * }
+   * ```
+   *
+   * The function is called once per cell per frame (SVG) or once per cell when the host is
+   * built and again whenever it is re-ranked (CSS), so it should be cheap and pure.
+   *
+   * `dir` arrives as a FIFTH argument — see `OrderFn`. A four-argument function still works
+   * and simply ignores it, which is the common case: a custom traversal that has no
+   * direction of its own should not be forced to accept one.
+   *
+   * It is a FUNCTION, and that has one consequence worth stating: it cannot be serialised,
+   * so the playground's copy-your-settings button leaves it out rather than pretending.
+   * A component carrying a custom traversal is a component whose motion is code — keep the
+   * copyable settings for what the library can express, and keep this in the source.
+   */
+  order?: OrderFn;
+  /**
    * Which way the light travels, as one token per axis. OMITTED or empty is the motion's
    * own direction — every existing call means that, so this is backward compatible.
    */
@@ -232,9 +262,18 @@ export interface DotMatrixOptions {
   reducedMotion?: boolean;
 }
 
-/** A dot matrix with every option filled in. */
-export type ResolvedDotMatrixOptions = Required<Omit<DotMatrixOptions, "stagger">> & {
+/**
+ * A dot matrix with every option filled in.
+ *
+ * `order` is omitted from the `Required` for the same reason `stagger` is: absent means
+ * "use the preset's own", which is not a value the resolver can fill in with anything —
+ * there is no default traversal, because a default would be one more thing silently
+ * overriding the caller. It stays `undefined` until a caller supplies one, and
+ * `resolveField` is where the preset's traversal takes over.
+ */
+export type ResolvedDotMatrixOptions = Required<Omit<DotMatrixOptions, "stagger" | "order">> & {
   stagger: number | null;
+  order?: OrderFn;
 };
 
 /** The geometry of a field, in px. Both renderers are driven from this. */
