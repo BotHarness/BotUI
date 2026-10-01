@@ -2,6 +2,20 @@
 
 ## [Unreleased]
 
+## [0.3.0] — 2026-10-01
+
+One feature: `order`, a caller-supplied traversal.
+
+- **`order?: OrderFn`** replaces the preset's traversal — the seam the layered design always
+  left open, now reachable from an option. **Free in both renderers**: the CSS host derives
+  each cell's `animation-delay` from the same traversal value, so a custom traversal costs
+  zero per-frame JS there too. A custom _envelope_ would not be free — the CSS animation is
+  one shared `@keyframes` per preset — which is why this is traversal only.
+- `OrderFn`'s fifth argument stays optional, so an existing four-argument traversal is still
+  valid and one with no sense of direction need not accept it.
+- **It is a function, so it is not copyable.** The playground's copy button omits it rather
+  than emitting a prop that would not compile.
+
 ### Changed
 
 - **Two lines of small grey text are gone.** T
