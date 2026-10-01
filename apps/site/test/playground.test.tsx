@@ -1095,10 +1095,17 @@ describe("the dot colour", () => {
     // `input[type=color]` silently refuses anything that is not `#rrggbb`: it keeps the
     // last valid value rather than showing what you set. `currentColor` — the engine's
     // default, and what the field opens on — is not `#rrggbb`, so the swatch has to be
-    // given a real hex or it shows a stale colour from an earlier interaction.
-    const value = swatch().value;
-    expect(value, "and never the literal string").not.toBe("currentColor");
-    expect(value, "which is the only form a colour input will render").toMatch(/^#[0-9a-f]{6}$/i);
+    // handed a real hex or it shows a stale colour from an earlier interaction.
+    //
+    // jsdom does not resolve `color` from an inline style into `getComputedStyle`, so the
+    // INHERITED branch cannot be observed here — the swatch falls back to black under
+    // jsdom while a browser resolves it. What IS asserted is the contract that let this
+    // break: a fallback must never be what a visitor sees, so the swatch is required to
+    // hold a real hex rather than the literal string.
+    expect(swatch().value, "never the literal string").not.toBe("currentColor");
+    expect(swatch().value, "and always the only form a colour input will render").toMatch(
+      /^#[0-9a-f]{6}$/i,
+    );
   });
 
   it("paints the field, not just its own label", async () => {
