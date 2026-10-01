@@ -1221,16 +1221,47 @@ describe("the dot colour", () => {
     expect(text().value, "and the engine never saw it", before).not.toBe("hsl(2");
   });
 
-  it("says so when the colour is something it cannot edit, rather than mangling it", async () => {
-    // `var(--brand)` is a legitimate thing to hand this component and the engine passes it
-    // straight through. Editing it here would destroy the reference.
+  it("passes a complete-but-unparseable value through, and refuses a half-typed one", async () => {
+    // The picker cannot parse `var(--brand)` and the ENGINE can, so it is passed straight
+    // through — otherwise the control would be narrower than the component and a token
+    // pasted from a design system would do nothing. The risk in doing that is committing
+    // half a token, and the difference between the two is that a real value closes what
+    // it opens.
     act(() => {
-      const evt = new window.Event("input", { bubbles: true });
-      // reach the playground state through the text field, which is the only honest door
       setNativeValue(text(), "var(--brand)");
-      text().dispatchEvent(evt);
+      text().dispatchEvent(new window.Event("input", { bubbles: true }));
     });
-    expect(container.querySelector(".color-note"), "and says why").toBeTruthy();
+    await committed();
+    expect(text().value, "a complete value is kept").toBe("var(--brand)");
+
+    act(() => {
+      setNativeValue(text(), "var(--bra");
+      text().dispatchEvent(new window.Event("input", { bubbles: true }));
+    });
+    await committed();
+    expect(text().value, "and the half-typed draft is still just a draft").toBe("var(--bra");
+  });
+
+  it("passes a colour it cannot edit through UNCHANGED, rather than mangling it", async () => {
+    // `var(--brand)` is a legitimate thing to hand this component, and the engine passes it
+    // straight to CSS. This used to be accompanied by a line of small grey text explaining
+    // that — which is redundant: the field already shows the value verbatim, and a second,
+    // smaller copy of the same fact is the one people stop reading. The behaviour it was
+    // describing is what is asserted here, not the note.
+    act(() => {
+      setNativeValue(text(), "var(--brand)");
+      text().dispatchEvent(new window.Event("input", { bubbles: true }));
+    });
+    await committed();
+    expect(text().value, "shown exactly as given").toBe("var(--brand)");
+    const writeText = vi.fn(async () => {});
+    Object.defineProperty(navigator, "clipboard", { value: { writeText }, configurable: true });
+    const button = container.querySelector(".showcase-copy button") as HTMLButtonElement;
+    await act(async () => button.click());
+    expect(
+      writeText.mock.calls[0]![0] as string,
+      "and copied exactly as given, so the reference survives",
+    ).toContain('color={"var(--brand)"}');
   });
 
   it("copies the colour into the snippet, because a snippet without it is a lie", async () => {

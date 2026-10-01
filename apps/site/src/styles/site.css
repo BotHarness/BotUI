@@ -258,12 +258,6 @@ h3 {
   padding: 7px 9px;
 }
 
-.color-note {
-  margin: 0;
-  font-size: 11px;
-  color: var(--muted);
-}
-
 /* The carried-away settings: the primary action of the playground, so it reads as one.
 
    It sits inside .playground-stage, which is a two-column grid (controls | field), so it
@@ -280,7 +274,6 @@ h3 {
 .showcase-copy-head {
   display: flex;
   flex-direction: column;
-  gap: 7px;
 }
 
 /* PRIMARY, and the only primary control on the page. Copying is the one thing a visitor
