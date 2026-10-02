@@ -66,19 +66,61 @@ export function ringsFrom(origin: { col: number; row: number }): OrderFn {
   };
 }
 
-/** the cell nearest a click, so a visitor can pick the origin with a pointer */
+/**
+ * The cell a pointer is over, and the pixel position of a cell's centre.
+ *
+ * Both come from the ENGINE's own `layout()` numbers, and that is the whole point: the
+ * handle is drawn where this function says and the hit-test is taken against the same
+ * function, so "the handle is under the cursor" is true by construction rather than by two
+ * approximations agreeing.
+ *
+ * Two mistakes are written into the old version and are worth naming, because both produce
+ * a handle that drifts further out the further out you drag — which is exactly the symptom
+ * that sent this back:
+ *
+ *   · the pitch was `box.width / cols`, which is not the pitch. The field's box is `size`
+ *     px including one dot of overhang, so the centre-to-centre distance is
+ *     `layout().pitchX` and the box/n is about 3% out before anything else is wrong;
+ *   · and the centre-to-cell conversion multiplied by `(cols - 1) / 2` a second time, making
+ *     the whole thing FOUR TIMES as sensitive as it should be. At the edge of a 9-wide field
+ *     that is a twelve-cell error, clamped — so the handle sat at the rim while the cursor
+ *     was halfway out, and dragging further changed nothing at all.
+ *
+ * The fixed version is the identity: a dot's centre is `dotPx/2 + col * pitchX` from the
+ * field's left edge, and a pointer at offset `x` from the field's centre is
+ * `x / pitchX` cells from the middle one.
+ */
+export interface FieldGeometry {
+  /** centre-to-centre distance in px, per axis */
+  pitchX: number;
+  pitchY: number;
+  /** one dot's width in px — the overhang at each end of the box */
+  dotPx: number;
+}
+
+/** where a cell's centre sits, relative to the field's box */
+export function cellCentre(
+  geo: FieldGeometry,
+  cell: { col: number; row: number },
+): { x: number; y: number } {
+  return {
+    x: geo.dotPx / 2 + cell.col * geo.pitchX,
+    y: geo.dotPx / 2 + cell.row * geo.pitchY,
+  };
+}
+
+/** the cell whose centre is nearest a point given as an offset from the field's centre */
 export function nearestCell(
   at: { x: number; y: number },
-  pitch: { x: number; y: number },
+  geo: FieldGeometry,
   cols: number,
   rows: number,
 ): { col: number; row: number } {
-  // the field is centred, so a click at (0,0) in field space is the top-left cell
-  const cx = (cols - 1) / 2;
-  const cy = (rows - 1) / 2;
-  const col = Math.round(cx + (at.x / pitch.x) * cx);
-  const row = Math.round(cy + (at.y / pitch.y) * cy);
+  const col = Math.round((cols - 1) / 2 + at.x / geo.pitchX);
+  const row = Math.round((rows - 1) / 2 + at.y / geo.pitchY);
   return {
+    // clamped, because a drag that leaves the field should park the origin at the rim
+    // rather than index off the lattice
     col: Math.min(cols - 1, Math.max(0, col)),
     row: Math.min(rows - 1, Math.max(0, row)),
   };

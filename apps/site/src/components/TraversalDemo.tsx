@@ -1,7 +1,8 @@
 import { useCallback, useMemo, useRef, useState } from "react";
 import { Matrix } from "./Matrix.js";
 import { m } from "../i18n.js";
-import { chevron, nearestCell, ringsFrom } from "../traversals.js";
+import { layout } from "@botharness/botui-core";
+import { cellCentre, chevron, nearestCell, ringsFrom } from "../traversals.js";
 // The source of the traversals file, at build time. Shown beside the field so the code a
 // visitor reads IS the code that is running — a hand-kept copy of a function is a copy that
 // lies the first time anyone edits one of them.
@@ -13,6 +14,26 @@ import traversalSource from "../traversals.ts?raw";
 const COPYABLE = traversalSource.slice(traversalSource.indexOf("export"));
 
 const N = 9;
+
+/**
+ * The field's geometry, from the ENGINE.
+ *
+ * The same numbers `<Matrix>` lays out with, so the handle can be placed on a cell and the
+ * hit-test can be taken against it with no approximation in between. This is the library's
+ * own rule — `field()` is the only place geometry is computed — applied to a control that
+ * has to agree with the thing it is pointing at.
+ */
+const FIELD = {
+  cols: N,
+  rows: N,
+  silhouette: "square",
+  dot: "circle",
+  dotSize: 0.8,
+  gapX: 0.12,
+  gapY: 0.12,
+  size: 260,
+} as const;
+const GEO = layout(FIELD);
 
 /**
  * The `order` seam, on the page.
@@ -37,35 +58,37 @@ export function TraversalDemo() {
 
   // rebuilt whenever the origin moves, and the field below is keyed on it so the engine
   // re-ranks rather than remounting — the same path a real caller takes
+  // the handle's position, from the same geometry the hit-test uses
+  const at = cellCentre(GEO, origin);
+
   const order = useMemo(
     () => (variant === "chevron" ? chevron : ringsFrom(origin)),
     [variant, origin],
   );
 
   /**
-   * A pointer position, in lattice cells.
+   * A pointer position, as a cell.
    *
-   * The field is drawn from its centre outward in the engine's own px geometry, so the
-   * click has to be measured from the middle rather than from the corner.
+   * Measured from the field's CENTRE and divided by the engine's pitch — the identity, not
+   * an approximation. An earlier version used `box.width / cols` as the pitch and scaled by
+   * the half-width a second time, which made the control four times too sensitive: at the
+   * rim of a 9-wide field that is a twelve-cell error, so the handle saturated at the edge
+   * while the cursor was halfway out and dragging further did nothing.
    */
   const move = useCallback((e: { clientX: number; clientY: number }) => {
-    const box = fieldRef.current?.getBoundingClientRect();
-    if (!box) return;
-    const pitch = box.width / N;
+    const host = hostRef.current?.getBoundingClientRect();
+    if (!host) return;
     setOrigin(
       nearestCell(
-        {
-          x: e.clientX - box.left - box.width / 2,
-          y: e.clientY - box.top - box.height / 2,
-        },
-        { x: pitch, y: pitch },
+        { x: e.clientX - host.left - host.width / 2, y: e.clientY - host.top - host.height / 2 },
+        GEO,
         N,
         N,
       ),
     );
   }, []);
 
-  const fieldRef = useRef<HTMLDivElement>(null);
+  const hostRef = useRef<HTMLDivElement>(null);
 
   return (
     <div className="traversal-demo">
@@ -93,7 +116,6 @@ export function TraversalDemo() {
 
       <div className="traversal-demo-body">
         <div
-          ref={fieldRef}
           className="traversal-field"
           // DRAG, not click. A centre you can only reach by clicking a single pixel is a
           // target nobody aims at twice, and the arrow demo asked for a centre precisely so
@@ -111,32 +133,26 @@ export function TraversalDemo() {
             if (variant === "rings" && e.buttons) move(e);
           }}
         >
-          <Matrix
-            cols={N}
-            rows={N}
-            size={260}
-            silhouette="square"
-            dot="circle"
-            dotSize={0.8}
-            gapX={0.12}
-            gapY={0.12}
-            preset={variant === "chevron" ? "spiral" : "ripple"}
-            renderer="css"
-            order={order}
-          />
-          {variant === "rings" && (
-            // The handle, drawn rather than described: a ring with a filled centre, because
-            // a 7px dot on a field of 81 dots reads as one more dot. The ring is what says
-            // "this is a thing you move".
-            <span className="traversal-origin" aria-hidden="true">
-              <span
-                style={{
-                  left: `${(origin.col / (N - 1)) * 100}%`,
-                  top: `${(origin.row / (N - 1)) * 100}%`,
-                }}
-              />
-            </span>
-          )}
+          {/* The wrapper is sized by the field, so the overlay inside it lines up with the
+              host EXACTLY. Positioning the handle in percentages of the padded box put it
+              up to 16px from the cell it claimed to be on — right for the middle, wrong at
+              every edge. */}
+          <div className="traversal-stage" ref={hostRef}>
+            <Matrix
+              {...FIELD}
+              preset={variant === "chevron" ? "spiral" : "ripple"}
+              renderer="css"
+              order={order}
+            />
+            {variant === "rings" && (
+              // The handle, drawn rather than described: a ring with a filled centre,
+              // because a 7px dot on a field of 81 dots reads as one more dot. The ring is
+              // what says "this is a thing you move".
+              <span className="traversal-origin" aria-hidden="true">
+                <span style={{ left: at.x, top: at.y }} />
+              </span>
+            )}
+          </div>
         </div>
 
         <div className="traversal-code">
