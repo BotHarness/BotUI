@@ -256,13 +256,18 @@ h3 {
 /* The centre handle: a ring with a filled middle. A 7px dot on a field of 81 dots reads as
    one more dot, and the RING is what says "this is a thing you move" — a filled disc says
    "this is a pixel", which is what it looked like before. */
-/* The overlay is positioned over the FIELD'S CONTENT BOX, not its padding box. `inset: 0`
-   would span the padding too, so a handle placed at 0% would sit in the padding rather than
-   on the first row of dots — which is exactly what it did before this was measured. The
-   field's own padding is the same 6px, so subtracting it here keeps the two in step. */
+/* Inside a wrapper sized by the field itself, so `inset: 0` IS the host box and a handle
+   placed in px lands on a cell rather than near one. The field's padding lives on the
+   OUTER element, which is what keeps the corner handle from being clipped without
+   perturbing anything the geometry depends on. */
+.traversal-stage {
+  position: relative;
+  line-height: 0;
+}
+
 .traversal-origin {
   position: absolute;
-  inset: 6px;
+  inset: 0;
   pointer-events: none;
 }
 

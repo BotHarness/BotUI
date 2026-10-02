@@ -7,8 +7,8 @@
  * that made `order` worth having in the first place.
  */
 import { describe, expect, it } from "vitest";
-import { field, type OrderFn } from "@botharness/botui-core";
-import { chevron, nearestCell, ringsFrom } from "../src/traversals.js";
+import { field, layout, type OrderFn } from "@botharness/botui-core";
+import { cellCentre, chevron, nearestCell, ringsFrom } from "../src/traversals.js";
 
 /** the leading cell of a rendered field — the one whose traversal value is lowest */
 const lead = (order: OrderFn, cols = 9, rows = 9) => {
@@ -176,26 +176,69 @@ describe("the code shown beside the field", () => {
 });
 
 describe("picking the origin by clicking", () => {
-  it("maps a click near the centre to the centre cell", () => {
-    const pitch = 260 / 9;
-    expect(nearestCell({ x: 0, y: 0 }, { x: pitch, y: pitch }, 9, 9)).toEqual({ col: 4, row: 4 });
+  /** the same field the demo renders, so the numbers are the engine's real ones */
+  const FIELD = {
+    cols: 9,
+    rows: 9,
+    silhouette: "square",
+    dot: "circle",
+    dotSize: 0.8,
+    gapX: 0.12,
+    gapY: 0.12,
+    size: 260,
+  } as const;
+  const GEO = layout(FIELD);
+  /** a pointer at a cell's centre, as an offset from the field's centre */
+  const overCell = (col: number, row: number) => {
+    const c = cellCentre(GEO, { col, row });
+    return { x: c.x - GEO.size / 2, y: c.y - GEO.size / 2 };
+  };
+
+  it("is the IDENTITY — a pointer on a cell's centre selects that cell", () => {
+    // This is the whole complaint. The previous formula used `box.width / cols` as the
+    // pitch AND scaled by the half-width a second time, so it was four times too
+    // sensitive: at the rim of a 9-wide field that is a twelve-cell error, clamped, and the
+    // handle sat at the edge while the cursor was halfway out. `box.width / cols` is not
+    // even the pitch — the box is `size` px including a dot of overhang at each end.
+    for (let row = 0; row < 9; row++) {
+      for (let col = 0; col < 9; col++) {
+        expect(nearestCell(overCell(col, row), GEO, 9, 9), `pointer on ${col},${row}`).toEqual({
+          col,
+          row,
+        });
+      }
+    }
   });
 
-  it("maps the top-left corner to cell 0,0", () => {
-    const pitch = 260 / 9;
-    const half = 260 / 2;
-    expect(nearestCell({ x: -half, y: -half }, { x: pitch, y: pitch }, 9, 9)).toEqual({
-      col: 0,
-      row: 0,
+  it("does not drift as the pointer moves outward, which is what a drag reports", () => {
+    // The symptom, stated as the assertion: the error against the true cell must not grow
+    // with distance from the middle.
+    for (const col of [0, 1, 2, 3, 5, 6, 7, 8]) {
+      const got = nearestCell(overCell(col, 4), GEO, 9, 9);
+      expect(Math.abs(got.col - col), `pointer on col ${col}`).toBeLessThanOrEqual(1);
+    }
+  });
+
+  it("places the handle where the hit-test will look for it", () => {
+    // Both consume `cellCentre`, which is the point: the handle cannot be drawn somewhere
+    // the hit-test does not consider.
+    const c = cellCentre(GEO, { col: 7, row: 2 });
+    expect(nearestCell({ x: c.x - GEO.size / 2, y: c.y - GEO.size / 2 }, GEO, 9, 9)).toEqual({
+      col: 7,
+      row: 2,
     });
   });
 
-  it("clamps a click past the edge rather than indexing out of the lattice", () => {
-    // The dot marker is drawn INSIDE the field box, so a click near the border can land a
-    // little beyond the last cell. An unclamped index would select nothing and the demo
-    // would silently stop responding at exactly the edge a visitor aims for.
-    const pitch = 260 / 9;
-    const far = { x: 9999, y: 9999 };
-    expect(nearestCell(far, { x: pitch, y: pitch }, 9, 9)).toEqual({ col: 8, row: 8 });
+  it("puts the first cell's centre one half-dot from the box edge, not at it", () => {
+    // The overhang is half a dot at each end, so a cell centre is `dotPx/2` in. Placing the
+    // handle at 0% instead put it half a dot outside the first dot — 16px at this size.
+    expect(cellCentre(GEO, { col: 0, row: 0 }).x).toBeCloseTo(GEO.dotPx / 2, 6);
+  });
+
+  it("clamps a pointer past the edge rather than indexing off the lattice", () => {
+    // A drag that leaves the field should park the origin at the rim rather than select
+    // nothing — which is the first place anyone drags to.
+    expect(nearestCell({ x: 9999, y: 9999 }, GEO, 9, 9)).toEqual({ col: 8, row: 8 });
+    expect(nearestCell({ x: -9999, y: -9999 }, GEO, 9, 9)).toEqual({ col: 0, row: 0 });
   });
 });
