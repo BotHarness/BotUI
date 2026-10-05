@@ -2,6 +2,15 @@
 
 Open-source UI components for agent products — the surfaces an agent app actually lives on: loading states, streaming indicators, status.
 
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset=".github/assets/dot-matrix-presets-dark.gif">
+    <img alt="Nine dot-matrix presets animating: spiral, snake, columnSnake, ripple, ring, diagonal, columns, breathe and morph" src=".github/assets/dot-matrix-presets-light.gif" width="704">
+  </picture>
+</p>
+
+<p align="center"><b><a href="https://ui.botharness.ai">Live playground →</a></b> · <a href="https://ui.botharness.ai/zh/">中文</a></p>
+
 Install a component with `npx`, and the source lands in your repo. **No runtime dependency. Nothing to keep current. The code is yours** — read it, change it, delete the name.
 
 ```bash
@@ -39,6 +48,15 @@ A loading field built as five replaceable layers. The interesting questions — 
 | **Envelope**  | how bright a cell is over the cycle (`comet`, `wave`, `plateau`, `chase`, …)        |
 | **Glyph**     | how one dot is drawn — a polygon plus two corner radii, not a table of named shapes |
 | **Renderer**  | SVG (painted per frame) or CSS (`@keyframes`, zero JS per frame)                    |
+
+Every layer is independent, so any lattice takes any glyph and any motion:
+
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset=".github/assets/dot-matrix-shapes-dark.gif">
+    <img alt="Six lattices (square, circle, diamond, hex, ring, cross) each drawn with a different dot glyph and motion" src=".github/assets/dot-matrix-shapes-light.gif" width="704">
+  </picture>
+</p>
 
 ```ts
 import { createDotMatrix } from "./components/botui";
